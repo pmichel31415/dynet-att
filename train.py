@@ -47,9 +47,13 @@ parser.add_argument("--attention", '-att',
 parser.add_argument("--verbose", '-v',
                     help="increase output verbosity",
                     action="store_true")
+parser.add_argument("--debug", '-dbg',
+                    help="Print debugging info",
+                    action="store_true")
 args = parser.parse_args()
 
-verbose=args.verbose
+verbose = args.verbose
+debug = args.debug
 
 # Writing a function to read in the training and test corpora, and
 # converting the words into numerical IDs.
@@ -124,7 +128,7 @@ class Seq2SeqModel(object):
 
         # Declare parameters
         self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, self.model)
-        dec_input_dim = self.dh * (2 if attention else 1)
+        dec_input_dim = self.di + (self.dh if self.att else 0)
         self.dec = dy.VanillaLSTMBuilder(1, dec_input_dim, self.dh, self.model)
         self.MS_p = self.model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = self.model.add_lookup_parameters((self.vt, self.di))
@@ -140,6 +144,8 @@ class Seq2SeqModel(object):
         input_len = max(len(s) for s in src)
         output_len = max(len(s) for s in trg)
         # Pad
+        if debug:
+            start = time.time()
         x = np.zeros((input_len, bsize), dtype=int)
         for i in range(bsize):
             while len(src[i]) < input_len:
@@ -157,31 +163,60 @@ class Seq2SeqModel(object):
         err = dy.scalarInput(0)
         encoded_states = []
         # Encode
+        if debug:
+            elapsed = time.time()-start
+            print('Preprocessing took : ', elapsed)
+            start = time.time()
         for i in range(input_len):
             embs = dy.lookup_batch(self.MS_p, x[i])
             es = es.add_input(embs)
             encoded_states.append(es.output())
+
+        if debug:
+            elapsed = time.time()-start
+            print('Building encoding : ', elapsed)
+            start = time.time()
         # Attend
         if self.att:
             H = dy.transpose(dy.concatenate_cols(encoded_states))
+        if debug:
+            elapsed = time.time()-start
+            print('Building attention : ', elapsed)
+            start = time.time()
         # Decode
         for j in range(output_len-1):
             embs = dy.lookup_batch(self.MT_p, y[j])
             if self.att:
-                context = dy.softmax(
-                    H * ds.h()[-1]) * H if j > 0 else dy.zeroes()
-                ds = ds.add_input(dy.concatenate(embs, context))
+                if j > 0:
+                    context=dy.transpose(H) * dy.softmax(H * ds.h()[-1])
+                else:
+                    context=dy.zeroes((self.dh,),batch_size=bsize)
+                ds = ds.add_input(dy.concatenate([embs, context]))
             else:
                 ds = ds.add_input(embs)
             s = D * ds.output()
             err += dy.pickneglogsoftmax_batch(s, y[j+1])
+        if debug:
+            elapsed = time.time()-start
+            print('Building decoding : ', elapsed)
+            start = time.time()
         err = dy.sum_batches(err) * (1 / bsize)
         error = err.scalar_value()
+        if debug:
+            elapsed = time.time()-start
+            print('Actually computing stuff : ', elapsed)
+            start = time.time()
         if update:
             err.backward()
             self.trainer.update()
+        if debug:
+            elapsed = time.time()-start
+            print('Backward pass : ', elapsed)
 
         return error
+
+    def transduce(self,x,):
+
 
 if __name__ == '__main__':
 
@@ -212,7 +247,8 @@ if __name__ == '__main__':
     # ===================================================================
     if verbose:
         print('Creating batch loaders')
-    trainbatchloader = BatchLoader(trainings_data, trainingt_data, args.batch_size)
+    trainbatchloader = BatchLoader(
+        trainings_data, trainingt_data, args.batch_size)
     devbatchloader = BatchLoader(valids_data, validt_data, args.batch_size)
 
     # ===================================================================
