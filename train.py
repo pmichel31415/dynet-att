@@ -2,6 +2,7 @@
 
 from __future__ import print_function, division
 import numpy as np
+import argparse
 from collections import defaultdict
 import dynet as dy
 import time
@@ -9,15 +10,46 @@ import time
 CHECK_TRAIN_ERROR_EVERY = 10
 CHECK_VALID_ERROR_EVERY = 1000
 
-attention = False
-
 widss = defaultdict(lambda: len(widss))
 widst = defaultdict(lambda: len(widst))
-data = []
-trains_file = 'en-de/train.en-de.en'
-traint_file = 'en-de/train.en-de.de'
-valids_file = 'en-de/valid.en-de.en'
-validt_file = 'en-de/valid.en-de.de'
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dynet-seed", default=0, type=int)
+parser.add_argument("--dynet-mem", default=512, type=int)
+parser.add_argument("--dynet-gpus", default=0, type=int)
+parser.add_argument("--train_src", '-ts',
+                    default='en-de/train.en-de.en', type=str)
+parser.add_argument("--train_dst", '-td',
+                    default='en-de/train.en-de.de', type=str)
+parser.add_argument("--valid_src", '-vs',
+                    default='en-de/valid.en-de.en', type=str)
+parser.add_argument("--valid_dst", '-vd',
+                    default='en-de/valid.en-de.de', type=str)
+parser.add_argument('--batch_size', '-bs',
+                    type=int, help='minibatch size', default=20)
+parser.add_argument('--emb_dim', '-de',
+                    type=int, help='embedding size', default=256)
+parser.add_argument('--hidden_dim', '-dh',
+                    type=int, help='hidden size', default=256)
+parser.add_argument('--dropout_rate', '-dr',
+                    type=float, help='dropout rate', default=0.0)
+parser.add_argument('--learning_rate', '-lr',
+                    type=float, help='learning rate', default=1.0)
+parser.add_argument('--learning_rate_decay', '-lrd',
+                    type=float, help='learning rate decay', default=0.0)
+parser.add_argument('--check_train_error_every', '-ct',
+                    type=int, help='Check train error every', default=100)
+parser.add_argument('--check_valid_error_every', '-cv',
+                    type=int, help='Check valid error every', default=1000)
+parser.add_argument("--attention", '-att',
+                    help="Use attention",
+                    action="store_true")
+parser.add_argument("--verbose", '-v',
+                    help="increase output verbosity",
+                    action="store_true")
+args = parser.parse_args()
+
+verbose=args.verbose
 
 # Writing a function to read in the training and test corpora, and
 # converting the words into numerical IDs.
@@ -33,29 +65,14 @@ def read_corpus(file, dic):
                                            for w in l.split()]+[dic['EOS']])
     return sentences
 
-print('Reading corpora')
-trainings_data = read_corpus(trains_file, widss)
-trainingt_data = read_corpus(traint_file, widst)
-valids_data = read_corpus(valids_file, widss)
-validt_data = read_corpus(validt_file, widst)
 
-print('Creating model')
-VOCAB_SIZE_S = len(widss)
-VOCAB_SIZE_T = len(widst)
-EMB_DIM = 128
-HID_DIM = 128
-BATCH_SIZE = 20
-
-model = dy.Model()
-
-enc = dy.VanillaLSTMBuilder(1, EMB_DIM, HID_DIM, model)
-dec = dy.VanillaLSTMBuilder(
-    1, HID_DIM * (2 if attention else 1), HID_DIM, model)
-MS_p = model.add_lookup_parameters((VOCAB_SIZE_S, EMB_DIM))
-MT_p = model.add_lookup_parameters((VOCAB_SIZE_T, EMB_DIM))
-D_p = model.add_parameters((VOCAB_SIZE_T, HID_DIM))
-
-trainer = dy.SimpleSGDTrainer(model, 1.0, 0.01)
+def print_config():
+    print('======= CONFIG =======')
+    for k, v in vars(args).items():
+        print(k, ':', v)
+    print('Source vocabulary size :', len(widss))
+    print('Target vocabulary size :', len(widst))
+    print('======================')
 
 
 class BatchLoader(object):
@@ -86,87 +103,141 @@ class BatchLoader(object):
     def __iter__(self): return self
 
 
-def calculate_loss(src, trg, update=False):
-    dy.renew_cg()
-    # M = dy.parameter(M_p)
-    # print(x.shape)
+class Seq2SeqModel(object):
 
-    bsize = len(src)
+    def __init__(self,
+                 input_dim,
+                 hidden_dim,
+                 source_vocab_size,
+                 target_vocab_size,
+                 lr=1.0,
+                 lr_decay=0.0,
+                 attention=False,
+                 dropout=0.0):
+        # Store config
+        self.di, self.dh = input_dim, hidden_dim
+        self.vs, self.vt = source_vocab_size, target_vocab_size
+        self.att = attention
+        self.dr = dropout
 
-    input_len = max(len(s) for s in src)
-    output_len = max(len(s) for s in trg)
-    # Pad
-    x = np.zeros((input_len, bsize), dtype=int)
-    for i in range(bsize):
-        while len(src[i]) < input_len:
-            src[i].insert(0, widss['SOS'])
-        x[:, i] = src[i]
-    y = np.zeros((output_len, bsize), dtype=int)
-    for i in range(bsize):
-        while len(trg[i]) < output_len:
-            trg[i].append(widst['EOS'])
-        y[:, i] = trg[i]
+        self.model = dy.Model()
 
-    print(input_len)
-    print(output_len)
-    D = dy.parameter(D_p)
-    es = enc.initial_state()
-    ds = dec.initial_state()
-    err = dy.scalarInput(0)
-    encoded_states = []
-    # Encode
-    for i in range(input_len):
-        embs = dy.lookup_batch(MS_p, x[i])
-        es = es.add_input(embs)
-        encoded_states.append(es.output())
-    # Attend
-    if attention:
-        H = dy.transpose(dy.concatenate_cols(encoded_states))
-    # Decode
-    for j in range(output_len-1):
-        embs = dy.lookup_batch(MT_p, y[j])
-        if attention:
-            context = dy.softmax(H * ds.h()[-1]) * H if j > 0 else dy.zeroes()
-            ds = ds.add_input(dy.concatenate(embs, context))
-        else:
-            ds = ds.add_input(embs)
-        s = D * ds.output()
-        err += dy.pickneglogsoftmax_batch(s, y[j+1])
-    err = dy.sum_batches(err) * (1 / BATCH_SIZE)
-    error = err.value()
-    if update:
-        err.backward()
-        trainer.update()
+        # Declare parameters
+        self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, self.model)
+        dec_input_dim = self.dh * (2 if attention else 1)
+        self.dec = dy.VanillaLSTMBuilder(1, dec_input_dim, self.dh, self.model)
+        self.MS_p = self.model.add_lookup_parameters((self.vs, self.di))
+        self.MT_p = self.model.add_lookup_parameters((self.vt, self.di))
+        self.D_p = self.model.add_parameters((self.vt, self.dh))
 
-    return error,output_len * bsize
+        self.trainer = dy.SimpleSGDTrainer(self.model, lr, lr_decay)
 
-print('Source vocabulary size :',len(widss))
-print('Target vocabulary size :',len(widst))
+    def calculate_loss(self, src, trg, update=False):
+        dy.renew_cg()
 
-print('Creating batch loaders')
-trainbatchloader = BatchLoader(trainings_data, trainingt_data, BATCH_SIZE)
-devbatchloader = BatchLoader(valids_data, validt_data, BATCH_SIZE)
-train_loss = 0
-print('starting training')
-start = time.time()
-processed = 0
-for i, (x, y) in enumerate(trainbatchloader):
-    loss,ntokens = calculate_loss(x, y, update=True)
-    train_loss += loss
-    processed += ntokens
-    if (i+1) % CHECK_TRAIN_ERROR_EVERY == 0:
-        logloss = train_loss / processed
-        ppl = np.exp(logloss)
-        elapsed = time.time()-start
-        print("Training_loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
-              (logloss, ppl, elapsed, processed))
-        start = time.time()
-        train_loss = 0
-        processed=0
-    if (i+1) % CHECK_VALID_ERROR_EVERY == 0:
-        dev_loss = 0
-        j = 0
-        for x,y in devbatchloader:
-            j += sum(map(len,y))
-            dev_loss += calculate_loss(dev_example)
-        print("Dev loss=%f" % (dev_loss/j))
+        bsize = len(src)
+
+        input_len = max(len(s) for s in src)
+        output_len = max(len(s) for s in trg)
+        # Pad
+        x = np.zeros((input_len, bsize), dtype=int)
+        for i in range(bsize):
+            while len(src[i]) < input_len:
+                src[i].insert(0, widss['SOS'])
+            x[:, i] = src[i]
+        y = np.zeros((output_len, bsize), dtype=int)
+        for i in range(bsize):
+            while len(trg[i]) < output_len:
+                trg[i].append(widst['EOS'])
+            y[:, i] = trg[i]
+
+        D = dy.parameter(self.D_p)
+        es = self.enc.initial_state()
+        ds = self.dec.initial_state()
+        err = dy.scalarInput(0)
+        encoded_states = []
+        # Encode
+        for i in range(input_len):
+            embs = dy.lookup_batch(self.MS_p, x[i])
+            es = es.add_input(embs)
+            encoded_states.append(es.output())
+        # Attend
+        if self.att:
+            H = dy.transpose(dy.concatenate_cols(encoded_states))
+        # Decode
+        for j in range(output_len-1):
+            embs = dy.lookup_batch(self.MT_p, y[j])
+            if self.att:
+                context = dy.softmax(
+                    H * ds.h()[-1]) * H if j > 0 else dy.zeroes()
+                ds = ds.add_input(dy.concatenate(embs, context))
+            else:
+                ds = ds.add_input(embs)
+            s = D * ds.output()
+            err += dy.pickneglogsoftmax_batch(s, y[j+1])
+        err = dy.sum_batches(err) * (1 / bsize)
+        error = err.scalar_value()
+        if update:
+            err.backward()
+            self.trainer.update()
+
+        return error
+
+if __name__ == '__main__':
+
+    # ===================================================================
+    if verbose:
+        print('Reading corpora')
+    trainings_data = read_corpus(args.train_src, widss)
+    trainingt_data = read_corpus(args.train_dst, widst)
+    valids_data = read_corpus(args.valid_src, widss)
+    validt_data = read_corpus(args.valid_dst, widst)
+
+    # ===================================================================
+    if verbose:
+        print('Creating model')
+    s2s = Seq2SeqModel(args.emb_dim,
+                       args.hidden_dim,
+                       len(widss),
+                       len(widst),
+                       lr=args.learning_rate,
+                       lr_decay=args.learning_rate_decay,
+                       attention=args.attention,
+                       dropout=args.dropout_rate)
+
+    # ===================================================================
+    if verbose:
+        print_config()
+
+    # ===================================================================
+    if verbose:
+        print('Creating batch loaders')
+    trainbatchloader = BatchLoader(trainings_data, trainingt_data, args.batch_size)
+    devbatchloader = BatchLoader(valids_data, validt_data, args.batch_size)
+
+    # ===================================================================
+    if verbose:
+        print('starting training')
+    train_loss = 0
+    start = time.time()
+    processed = 0
+    for i, (x, y) in enumerate(trainbatchloader):
+        processed += sum(map(len, y))
+        loss = s2s.calculate_loss(x, y, update=True)
+        train_loss += loss
+        if (i+1) % args.check_train_error_every == 0:
+            logloss = train_loss / processed
+            ppl = np.exp(logloss)
+            elapsed = time.time()-start
+            print("Training_loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
+                  (logloss, ppl, elapsed, processed))
+            start = time.time()
+            train_loss = 0
+            processed = 0
+        if (i+1) % args.check_valid_error_every == 0:
+            dev_loss = 0
+            j = 0
+            for x, y in devbatchloader:
+                j += sum(map(len, y))
+                dev_loss += s2s.calculate_loss(dev_example)
+            print("Dev loss=%f" % (dev_loss/j))
