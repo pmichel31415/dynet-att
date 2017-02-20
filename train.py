@@ -429,6 +429,7 @@ if __name__ == '__main__':
                         source = ' '.join([ids2ws[w] for w in x])
                         of.write(source + ':' + translation+'\n')
                 test_elapsed = time.time()-test_start
-                print('Finished running on test set,' test_elapsed,'elapsed.')
+                print('Finished running on test set', test_elapsed,'elapsed.')
                 sys.stdout.flush()
+                
 
