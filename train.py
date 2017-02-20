@@ -7,6 +7,7 @@ from collections import defaultdict
 import dynet as dy
 import time
 import pickle
+import sys
 
 CHECK_TRAIN_ERROR_EVERY = 10
 CHECK_VALID_ERROR_EVERY = 1000
@@ -339,6 +340,7 @@ if __name__ == '__main__':
     # ===================================================================
     if verbose:
         print('Creating model')
+        sys.stdout.flush()
     m = dy.Model()
     model_file = args.model
     if model_file is not None:
@@ -360,10 +362,12 @@ if __name__ == '__main__':
     # ===================================================================
     if verbose:
         print_config()
+        sys.stdout.flush()
 
     # ===================================================================
     if verbose:
         print('Creating batch loaders')
+        sys.stdout.flush()
     trainbatchloader = BatchLoader(
         trainings_data, trainingt_data, args.batch_size)
     devbatchloader = BatchLoader(valids_data, validt_data, args.batch_size)
@@ -371,6 +375,7 @@ if __name__ == '__main__':
     # ===================================================================
     if verbose:
         print('starting training')
+        sys.stdout.flush()
     train_loss = 0
     start = time.time()
     processed = 0
@@ -392,6 +397,7 @@ if __name__ == '__main__':
                 start = time.time()
                 train_loss = 0
                 processed = 0
+                sys.stdout.flush()
             if (i+1) % args.check_valid_error_every == 0:
                 trainer.update_epoch()
                 dev_loss = 0
@@ -409,6 +415,7 @@ if __name__ == '__main__':
                 if dev_ppl > best_dev_loss:
                     print('Best dev error up to date, saving model to', model_file)
                     m.save(model_file, [s2s])
+                sys.stdout.flush()
 
             if (i+1) % args.test_every == 0:
                 dev_loss = 0
@@ -423,4 +430,5 @@ if __name__ == '__main__':
                         of.write(source + ':' + translation+'\n')
                 test_elapsed = time.time()-test_start
                 print('Finished running on test set,' test_elapsed,'elapsed.')
+                sys.stdout.flush()
 
