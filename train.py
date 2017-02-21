@@ -359,11 +359,9 @@ class Seq2SeqModel(dy.Saveable):
         words = []
         beam = []
         start = dy.lookup(self.MT_p, widst['SOS'])
-        start = dy.concatenate([start,dy.zeroes((self.dec_di - self.di))])
-        ds = ds.add_input()
+        start = dy.concatenate([start,dy.zeroes((self.dec_di - self.di,))])
+        ds = ds.add_input(start)
         beam.append((ds, [widst['SOS']], 0.0))
-        for b in range(beam_size):
-            beam.append((self.dec.initial_state(), [widst['SOS']], 0.0))
         for i in range(int(min(self.max_len, input_len * 1.5))):
             new_beam = []
             for ds, pw, logprob in beam:
@@ -395,10 +393,10 @@ class Seq2SeqModel(dy.Saveable):
         return beam[-1][1]
 
     def get_components(self):
-        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p
+        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p, self.b_p
 
     def restore_components(self, components):
-        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p = components
+        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p, self.b_p = components
 
 
 if __name__ == '__main__':
