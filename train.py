@@ -186,6 +186,7 @@ class Seq2SeqModel(dy.Saveable):
         self.MS_p = model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = model.add_lookup_parameters((self.vt, self.di))
         self.D_p = model.add_parameters((self.vt, self.dh))
+        self.b_p = model.add_parameters((self.vt,))
 
         self.max_len = max_len
 
@@ -218,6 +219,7 @@ class Seq2SeqModel(dy.Saveable):
             y[:, i] = trgi
 
         D = dy.parameter(self.D_p)
+        b = dy.parameter(self.b_p)
         A = dy.parameter(self.A_p)
 
         # Set dropout if necessary
@@ -277,18 +279,18 @@ class Seq2SeqModel(dy.Saveable):
             print('Building attention : ', elapsed)
             start = time.time()
         # Decode
+        start = dy.lookup_batch(self.MT_p,[widst['SOS']] * bsize)
+        start = dy.concatenate([start,dy.zeroes((self.dec_di-self.di,),batch_size=bsize)])
+        ds = ds.add_input(start)
         for cw, nw, mask in zip(y, y[1:], masksy[1:]):
             embs = dy.lookup_batch(self.MT_p, cw)
             if self.att:
-                if ds.output() is not None:
-                    h = ds.output()
-                else:
-                    h = dy.zeroes((self.dh,))
+                h = ds.output()
                 context = H * dy.softmax(dy.transpose(A * H) * h)
                 ds = ds.add_input(dy.concatenate([embs, context]))
             else:
                 ds = ds.add_input(embs)
-            s = D * ds.output()
+            s = D * ds.output() + b
             masksy_e = dy.reshape(dy.inputVector(mask), (1,), batch_size=bsize)
             err = dy.cmult(dy.pickneglogsoftmax_batch(s, nw), masksy_e)
             errs.append(err)
@@ -304,6 +306,7 @@ class Seq2SeqModel(dy.Saveable):
         dy.renew_cg()
         input_len = len(x)
         D = dy.parameter(self.D_p)
+        b = dy.parameter(self.b_p)
         A = dy.parameter(self.A_p)
         self.enc.disable_dropout()
         self.dec.disable_dropout()
@@ -355,6 +358,10 @@ class Seq2SeqModel(dy.Saveable):
         cw = widst['SOS']
         words = []
         beam = []
+        start = dy.lookup(self.MT_p, widst['SOS'])
+        start = dy.concatenate([start,dy.zeroes((self.dec_di - self.di))])
+        ds = ds.add_input()
+        beam.append((ds, [widst['SOS']], 0.0))
         for b in range(beam_size):
             beam.append((self.dec.initial_state(), [widst['SOS']], 0.0))
         for i in range(int(min(self.max_len, input_len * 1.5))):
@@ -362,15 +369,12 @@ class Seq2SeqModel(dy.Saveable):
             for ds, pw, logprob in beam:
                 embs = dy.lookup(self.MT_p, pw[-1])
                 if self.att:
-                    if ds.output() is not None:
-                        h = ds.output()
-                    else:
-                        h = dy.zeroes((self.dh,))
+                    h = ds.output()
                     context = H * dy.softmax(dy.transpose(A * H) * h)
                     ds = ds.add_input(dy.concatenate([embs, context]))
                 else:
                     ds = ds.add_input(embs)
-                s = D * ds.output()
+                s = D * ds.output() + b
                 p = dy.softmax(s * (1 / T)).npvalue()
                 # Careful of float error
                 p = p/p.sum()
@@ -494,12 +498,14 @@ if __name__ == '__main__':
                     print("[epoch %d] Dev loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
                           (epoch, dev_logloss, dev_ppl, dev_elapsed, dev_processed))
                     if dev_ppl > best_dev_loss:
+                        best_dev_loss=dev_ppl
                         print('Best dev error up to date, saving model to', model_file)
                         m.save(model_file, [s2s])
                     sys.stdout.flush()
 
                 if (i+1) % args.test_every == 0:
                     print('Start running on test set, buckle up!')
+                    sys.stdout.flush()
                     test_start = time.time()
                     with open(args.test_out, 'w+') as of:
                         for x in tests_data:
@@ -513,6 +519,7 @@ if __name__ == '__main__':
     # ===================================================================
     if args.test:
         print('Start running on test set, buckle up!')
+        sys.stdout.flush()
         test_start = time.time()
         with open(args.test_out, 'w+') as of:
             for x in tests_data:
