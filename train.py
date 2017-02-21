@@ -508,8 +508,7 @@ if __name__ == '__main__':
                         for x in tests_data:
                             y = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
                             translation = ' '.join([ids2wt[w] for w in y])
-                            source = ' '.join([ids2ws[w] for w in x])
-                            of.write(source + ':' + translation+'\n')
+                            of.write(translation+'\n')
                     test_elapsed = time.time()-test_start
                     print('Finished running on test set', test_elapsed, 'elapsed.')
                     sys.stdout.flush()
@@ -522,8 +521,7 @@ if __name__ == '__main__':
             for x in tests_data:
                 y = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
                 translation = ' '.join([ids2wt[w] for w in y])
-                source = ' '.join([ids2ws[w] for w in x])
-                of.write(source + ':' + translation+'\n')
+                of.write(translation+'\n')
         test_elapsed = time.time()-test_start
         print('Finished running on test set', test_elapsed, 'elapsed.')
         sys.stdout.flush()
