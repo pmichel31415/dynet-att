@@ -54,7 +54,7 @@ parser.add_argument('--test_every', '-te',
                     type=int, help='Run on test set every', default=500)
 parser.add_argument('--max_len', '-ml', type=int,
                     help='Maximum length of generated sentences', default=60)
-parser.add_argument('--beam_size', '-bs', type=int,
+parser.add_argument('--beam_size', '-bm', type=int,
                     help='Beam size for beam search', default=1)
 parser.add_argument("--attention", '-att',
                     help="Use attention",
@@ -67,10 +67,10 @@ parser.add_argument("--verbose", '-v',
 parser.add_argument("--debug", '-dbg',
                     help="Print debugging info",
                     action="store_true")
-parser.add_argument("--train", '-tr',
+parser.add_argument("--train",
                     help="Print debugging info",
                     action="store_true")
-parser.add_argument("--test", '-te',
+parser.add_argument("--test",
                     help="Print debugging info",
                     action="store_true")
 
@@ -301,7 +301,7 @@ class Seq2SeqModel(dy.Saveable):
         for i in range(int(min(self.max_len, input_len * 1.5))):
             new_beam=[]
             for ds,pw,logprob in beam:
-                embs = dy.lookup_batch(self.MT_p, pw[-1])
+                embs = dy.lookup(self.MT_p, pw[-1])
                 if self.att:
                     if ds.output() is not None:
                         h = ds.output()
