@@ -252,7 +252,7 @@ class Seq2SeqModel(dy.Saveable):
 
         return err
 
-    def translate(self, x, decoding='greedy', T=1.0):
+    def translate(self, x, decoding='greedy', T=1.0,beam_size=1):
         dy.renew_cg()
         input_len = len(x)
         D = dy.parameter(self.D_p)
@@ -284,37 +284,41 @@ class Seq2SeqModel(dy.Saveable):
         # Decode
         cw = widst['SOS']
         words = []
+        beam = []
+        for b in range(beam_size):
+            beam.append((self.dec.initial_state(), [widst['SOS']],0.0))
         for i in range(int(min(self.max_len, input_len * 1.5))):
-            embs = dy.lookup(self.MT_p, cw)
-            if self.att:
-                if ds.output() is not None:
-                    h = ds.output()
+            new_beam=[]
+            for ds,pw,logprob in beam:
+                embs = dy.lookup_batch(self.MT_p, pw[-1])
+                if self.att:
+                    if ds.output() is not None:
+                        h = ds.output()
+                    else:
+                        h = dy.zeroes((self.dh,))
+                    context = dy.transpose(H) * dy.softmax(H * h)
+                    ds = ds.add_input(dy.concatenate([embs, context]))
                 else:
-                    h = dy.zeroes((self.dh,))
-                context = dy.transpose(H) * dy.softmax(H * h)
-                ds = ds.add_input(dy.concatenate([embs, context]))
-            else:
-                ds = ds.add_input(embs)
-            s = D * ds.output()
-            p = dy.softmax(s * (1 / T)).npvalue()
-            # Careful of float error
-            p = p/p.sum()
-            if decoding == 'sample':
-                nw = np.random.choice(range(len(widst)), p=p)
-            elif decoding == 'greedy':
-                nw = np.argmax(p)
+                    ds = ds.add_input(embs)
+                s = D * ds.output()
+                p = dy.softmax(s * (1 / T)).npvalue()
+                # Careful of float error
+                p = p/p.sum()
+                kbest = np.argsort(p)
+                for b in range(beam_size):
+                    nw = kbest[-(b+1)]
+                    new_beam.append((ds,pw + [nw],logprob + np.log(p[nw])))
 
-            words.append(nw)
-            if nw == widst['EOS']:
+            beam = sorted(new_beam,key=lambda x: x[2])[-beam_size:]
+
+            if beam[-1][1][-1] == widst['EOS']:
                 break
-            else:
-                cw = nw
 
         if debug:
             elapsed = time.time()-start
             print('Decoding : ', elapsed)
 
-        return words
+        return beam[-1][1]
 
     def get_components(self):
         return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p
