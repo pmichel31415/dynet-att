@@ -54,6 +54,8 @@ parser.add_argument('--test_every', '-te',
                     type=int, help='Run on test set every', default=500)
 parser.add_argument('--max_len', '-ml', type=int,
                     help='Maximum length of generated sentences', default=60)
+parser.add_argument('--beam_size', '-bs', type=int,
+                    help='Beam size for beam search', default=1)
 parser.add_argument("--attention", '-att',
                     help="Use attention",
                     action="store_true")
@@ -65,6 +67,15 @@ parser.add_argument("--verbose", '-v',
 parser.add_argument("--debug", '-dbg',
                     help="Print debugging info",
                     action="store_true")
+parser.add_argument("--train", '-tr',
+                    help="Print debugging info",
+                    action="store_true")
+parser.add_argument("--test", '-te',
+                    help="Print debugging info",
+                    action="store_true")
+
+
+
 args = parser.parse_args()
 
 verbose = args.verbose
@@ -377,63 +388,74 @@ if __name__ == '__main__':
     devbatchloader = BatchLoader(valids_data, validt_data, args.batch_size)
 
     # ===================================================================
-    if verbose:
-        print('starting training')
+    if args.train:
+        if verbose:
+            print('starting training')
+            sys.stdout.flush()
+        train_loss = 0
+        start = time.time()
+        processed = 0
+        best_dev_loss = -np.inf
+        for epoch in range(args.num_epochs):
+            for i, (x, y) in enumerate(trainbatchloader):
+                processed += sum(map(len, y))
+                loss = s2s.calculate_loss(x, y)
+                loss.backward()
+                trainer.update()
+                train_loss += loss.scalar_value()
+                if (i+1) % args.check_train_error_every == 0:
+                    logloss = train_loss / processed
+                    ppl = np.exp(logloss)
+                    elapsed = time.time()-start
+                    trainer.status()
+                    print("Training_loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
+                          (epoch, logloss, ppl, elapsed, processed))
+                    start = time.time()
+                    train_loss = 0
+                    processed = 0
+                    sys.stdout.flush()
+                if (i+1) % args.check_valid_error_every == 0:
+                    dev_loss = 0
+                    dev_processed = 0
+                    dev_start = time.time()
+                    for x, y in devbatchloader:
+                        dev_processed += sum(map(len, y))
+                        loss = s2s.calculate_loss(x, y)
+                        dev_loss += loss.scalar_value()
+                    dev_logloss = dev_loss/dev_processed
+                    dev_ppl = np.exp(dev_logloss)
+                    dev_elapsed = time.time()-dev_start
+                    print("[epoch %d] Dev loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
+                          (epoch, dev_logloss, dev_ppl, dev_elapsed, dev_processed))
+                    if dev_ppl > best_dev_loss:
+                        print('Best dev error up to date, saving model to', model_file)
+                        m.save(model_file, [s2s])
+                    sys.stdout.flush()
+
+                if args.test and (i+1) % args.test_every == 0:
+                    print('Start running on test set, buckle up!')
+                    test_start = time.time()
+                    with open(args.test_out, 'w+') as of:
+                        for x in tests_data:
+                            y = s2s.translate(x, decoding='beam_search',beam_size=args.beam_size)
+                            translation = ' '.join([ids2wt[w] for w in y])
+                            source = ' '.join([ids2ws[w] for w in x])
+                            of.write(source + ':' + translation+'\n')
+                    test_elapsed = time.time()-test_start
+                    print('Finished running on test set', test_elapsed,'elapsed.')
+                    sys.stdout.flush()
+            trainer.update_epoch()
+    # ===================================================================
+    if args.test:
+        print('Start running on test set, buckle up!')
+        test_start = time.time()
+        with open(args.test_out, 'w+') as of:
+            for x in tests_data:
+                y = s2s.translate(x, decoding='beam_search',beam_size=args.beam_size)
+                translation = ' '.join([ids2wt[w] for w in y])
+                source = ' '.join([ids2ws[w] for w in x])
+                of.write(source + ':' + translation+'\n')
+        test_elapsed = time.time()-test_start
+        print('Finished running on test set', test_elapsed,'elapsed.')
         sys.stdout.flush()
-    train_loss = 0
-    start = time.time()
-    processed = 0
-
-    best_dev_loss = -np.inf
-    for epoch in range(args.num_epochs):
-        for i, (x, y) in enumerate(trainbatchloader):
-            processed += sum(map(len, y))
-            loss = s2s.calculate_loss(x, y)
-            loss.backward()
-            trainer.update()
-            train_loss += loss.scalar_value()
-            if (i+1) % args.check_train_error_every == 0:
-                logloss = train_loss / processed
-                ppl = np.exp(logloss)
-                elapsed = time.time()-start
-                print("[epoch %d] Training_loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
-                      (epoch, logloss, ppl, elapsed, processed))
-                start = time.time()
-                train_loss = 0
-                processed = 0
-                sys.stdout.flush()
-            if (i+1) % args.check_valid_error_every == 0:
-                trainer.update_epoch()
-                dev_loss = 0
-                dev_processed = 0
-                dev_start = time.time()
-                for x, y in devbatchloader:
-                    dev_processed += sum(map(len, y))
-                    loss = s2s.calculate_loss(x, y)
-                    dev_loss += loss.scalar_value()
-                dev_logloss = dev_loss/dev_processed
-                dev_ppl = np.exp(dev_logloss)
-                dev_elapsed = time.time()-dev_start
-                print("[epoch %d] Dev loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
-                      (epoch, dev_logloss, dev_ppl, dev_elapsed, dev_processed))
-                if dev_ppl > best_dev_loss:
-                    print('Best dev error up to date, saving model to', model_file)
-                    m.save(model_file, [s2s])
-                sys.stdout.flush()
-
-            if (i+1) % args.test_every == 0:
-                dev_loss = 0
-                j = 0
-                print('Start running on test set, buckle up!')
-                test_start = time.time()
-                with open(args.test_out, 'w+') as of:
-                    for x in tests_data:
-                        y = s2s.translate(x, decoding='greedy')
-                        translation = ' '.join([ids2wt[w] for w in y])
-                        source = ' '.join([ids2ws[w] for w in x])
-                        of.write(source + ':' + translation+'\n')
-                test_elapsed = time.time()-test_start
-                print('Finished running on test set', test_elapsed,'elapsed.')
-                sys.stdout.flush()
-                
 
