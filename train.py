@@ -463,7 +463,7 @@ if __name__ == '__main__':
         train_loss = 0
         start = time.time()
         processed = 0
-        best_dev_loss = -np.inf
+        best_dev_loss = np.inf
         for epoch in range(args.num_epochs):
             for i, (x, y) in enumerate(trainbatchloader):
                 processed += sum(map(len, y))
@@ -495,7 +495,7 @@ if __name__ == '__main__':
                     dev_elapsed = time.time()-dev_start
                     print("[epoch %d] Dev loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
                           (epoch, dev_logloss, dev_ppl, dev_elapsed, dev_processed))
-                    if dev_ppl > best_dev_loss:
+                    if dev_ppl < best_dev_loss:
                         best_dev_loss=dev_ppl
                         print('Best dev error up to date, saving model to', model_file)
                         m.save(model_file, [s2s])
