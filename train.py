@@ -182,7 +182,7 @@ class Seq2SeqModel(dy.Saveable):
         self.W_enc_p = model.add_lookup_parameters((self.vs, self.di))
         self.dec_di = self.di + (self.dh if self.att else 0) + (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
         self.dec = dy.VanillaLSTMBuilder(1, self.dec_di, self.dh, model)
-        self.A_p = model.add_parameters((self.dh, self.dec_di))
+        self.A_p = model.add_parameters((self.dh, self.dec_di - self.di))
         self.MS_p = model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = model.add_lookup_parameters((self.vt, self.di))
         self.D_p = model.add_parameters((self.vt, self.dh))
@@ -272,7 +272,6 @@ class Seq2SeqModel(dy.Saveable):
             if self.word_emb:
                 H_word_embs=dy.concatenate_cols(encoded_wembs)
                 H=dy.concatenate([H,H_word_embs])
-            H = A * H
         if debug:
             elapsed = time.time()-start
             print('Building attention : ', elapsed)
@@ -284,8 +283,8 @@ class Seq2SeqModel(dy.Saveable):
                 if ds.output() is not None:
                     h = ds.output()
                 else:
-                    h = dy.zeroes((self.dec_di,))
-                context = dy.transpose(dy.softmax(h * H) * H)
+                    h = dy.zeroes((self.dh,))
+                context = H * dy.softmax(dy.transpose(A * H) * h)
                 ds = ds.add_input(dy.concatenate([embs, context]))
             else:
                 ds = ds.add_input(embs)
@@ -320,19 +319,19 @@ class Seq2SeqModel(dy.Saveable):
             encoded_states.append(es.output())
 
         if self.bidir:
-            self.rev_enc.set_dropout(self.dr)
+            self.rev_enc.disable_dropout()
             res = self.rev_enc.initial_state()
             rev_encoded_states=[]
-            for w in reversed(zip(x, masksx)):
-                embs = dy.lookup_batch(self.MS_p, w)
+            for w in reversed(x):
+                embs = dy.lookup(self.MS_p, w)
                 res = res.add_input(embs)
                 rev_encoded_states.append(res.output())
             rev_encoded_states.reverse()
             
         if self.word_emb:
             encoded_wembs=[]
-            for w in zip(x, masksx):
-                w_embs=dy.lookup_batch(self.W_enc_p, w)
+            for w in x:
+                w_embs=dy.lookup(self.W_enc_p, w)
                 encoded_wembs.append(w_embs)
 
         if debug:
@@ -348,7 +347,6 @@ class Seq2SeqModel(dy.Saveable):
             if self.word_emb:
                 H_word_embs=dy.concatenate_cols(encoded_wembs)
                 H=dy.concatenate([H,H_word_embs])
-            H = A * H
         if debug:
             elapsed = time.time()-start
             print('Building attention : ', elapsed)
@@ -363,12 +361,12 @@ class Seq2SeqModel(dy.Saveable):
             new_beam = []
             for ds, pw, logprob in beam:
                 embs = dy.lookup(self.MT_p, pw[-1])
-                if self.att:if self.att:
+                if self.att:
                     if ds.output() is not None:
                         h = ds.output()
                     else:
-                        h = dy.zeroes((self.dec_di,))
-                    context = dy.transpose(dy.softmax(h * H) * H)
+                        h = dy.zeroes((self.dh,))
+                    context = H * dy.softmax(dy.transpose(A * H) * h)
                     ds = ds.add_input(dy.concatenate([embs, context]))
                 else:
                     ds = ds.add_input(embs)
@@ -393,10 +391,10 @@ class Seq2SeqModel(dy.Saveable):
         return beam[-1][1]
 
     def get_components(self):
-        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc
+        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p
 
     def restore_components(self, components):
-        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc = components
+        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p = components
 
 
 if __name__ == '__main__':
@@ -414,8 +412,7 @@ if __name__ == '__main__':
     valids_data = read_corpus(args.valid_src, widss, frozen=True)
     validt_data = read_corpus(args.valid_dst, widst, frozen=True)
     # Read test
-    if args.test:
-        tests_data = read_corpus(args.test_src, widss, frozen=True)
+    tests_data = read_corpus(args.test_src, widss, frozen=True)
 
     ids2ws = reverse_dic(widss)
     ids2wt = reverse_dic(widst)
@@ -436,13 +433,13 @@ if __name__ == '__main__':
                            len(widst),
                            attention=args.attention,
                            bidir=args.bidir,
-                           word_emb=args.word_emb
+                           word_emb=args.word_emb,
                            dropout=args.dropout_rate,
                            max_len=args.max_len)
         model_file = args.exp_name+'_model.txt'
 
     trainer = dy.SimpleSGDTrainer(m, args.learning_rate, args.learning_rate_decay)
-
+    trainer.set_clip_threshold(args.batch_size)
     # ===================================================================
     if verbose:
         print_config()
@@ -477,8 +474,8 @@ if __name__ == '__main__':
                     ppl = np.exp(logloss)
                     elapsed = time.time()-start
                     trainer.status()
-                    print("Training_loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
-                          (epoch, logloss, ppl, elapsed, processed))
+                    print(" Training_loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
+                          (logloss, ppl, elapsed, processed))
                     start = time.time()
                     train_loss = 0
                     processed = 0
@@ -501,7 +498,7 @@ if __name__ == '__main__':
                         m.save(model_file, [s2s])
                     sys.stdout.flush()
 
-                if args.test and (i+1) % args.test_every == 0:
+                if (i+1) % args.test_every == 0:
                     print('Start running on test set, buckle up!')
                     test_start = time.time()
                     with open(args.test_out, 'w+') as of:
