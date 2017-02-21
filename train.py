@@ -61,6 +61,12 @@ parser.add_argument("--attention", '-att',
                     action="store_true")
 parser.add_argument("--exp_name", '-en', type=str, required=True,
                     help='Name of the experiment (used so save the model)')
+parser.add_argument("--bidir", '-bid',
+                    help="Activates bidirectionnal encoding",
+                    action="store_true")
+parser.add_argument("--word_emb", '-we',
+                    help="Activates direct word embedding for attention",
+                    action="store_true")
 parser.add_argument("--verbose", '-v',
                     help="increase output verbosity",
                     action="store_true")
@@ -73,7 +79,6 @@ parser.add_argument("--train",
 parser.add_argument("--test",
                     help="Print debugging info",
                     action="store_true")
-
 
 
 args = parser.parse_args()
@@ -159,19 +164,25 @@ class Seq2SeqModel(dy.Saveable):
                  source_vocab_size,
                  target_vocab_size,
                  attention=False,
+                 bidir=False,
+                 word_emb=False,
                  dropout=0.0,
                  max_len=60):
         # Store config
         self.di, self.dh = input_dim, hidden_dim
         self.vs, self.vt = source_vocab_size, target_vocab_size
         self.att = attention
+        self.bidir = bidir
+        self.word_emb = word_emb
         self.dr = dropout
 
         # Declare parameters
         self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
-        dec_input_dim = self.di + (self.dh if self.att else 0)
-        self.dec = dy.VanillaLSTMBuilder(1, dec_input_dim, self.dh, model)
-        self.A_p = model.add_parameters((self.dh, self.dh))
+        self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
+        self.W_enc_p = model.add_lookup_parameters((self.vs, self.di))
+        self.dec_di = self.di + (self.dh if self.att else 0) + (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
+        self.dec = dy.VanillaLSTMBuilder(1, self.dec_di, self.dh, model)
+        self.A_p = model.add_parameters((self.dh, self.dec_di))
         self.MS_p = model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = model.add_lookup_parameters((self.vt, self.di))
         self.D_p = model.add_parameters((self.vt, self.dh))
@@ -225,8 +236,28 @@ class Seq2SeqModel(dy.Saveable):
             embs = dy.lookup_batch(self.MS_p, iw)
             es = es.add_input(embs)
             masksx_e = dy.reshape(
-                dy.inputMatrix(mask.flatten(order='F'), (self.di, bsize)), (self.di,), batch_size=bsize)
+                dy.inputMatrix(mask.flatten(order='F'), (self.dh, bsize)), (self.dh,), batch_size=bsize)
             encoded_states.append(dy.cmult(masksx_e, es.output()))
+
+        if self.bidir:
+            self.rev_enc.set_dropout(self.dr)
+            res = self.rev_enc.initial_state()
+            rev_encoded_states=[]
+            for iw, mask in reversed(zip(x, masksx)):
+                embs = dy.lookup_batch(self.MS_p, iw)
+                res = res.add_input(embs)
+                masksx_e = dy.reshape(
+                    dy.inputMatrix(mask.flatten(order='F'), (self.dh, bsize)), (self.dh,), batch_size=bsize)
+                rev_encoded_states.append(dy.cmult(masksx_e, res.output()))
+            rev_encoded_states.reverse()
+            
+        if self.word_emb:
+            encoded_wembs=[]
+            for iw, mask in zip(x, masksx):
+                w_embs=dy.lookup_batch(self.W_enc_p, iw)
+                masksx_e = dy.reshape(
+                    dy.inputMatrix(mask.flatten(order='F'), (self.dh, bsize)), (self.dh,), batch_size=bsize)
+                encoded_wembs.append(dy.cmult(masksx_e,w_embs))
 
         if debug:
             elapsed = time.time()-start
@@ -234,7 +265,14 @@ class Seq2SeqModel(dy.Saveable):
             start = time.time()
         # Attend
         if self.att:
-            H = dy.transpose(dy.concatenate_cols(encoded_states)) * A
+            H = dy.concatenate_cols(encoded_states)
+            if self.bidir:
+                H_bidir=dy.concatenate_cols(rev_encoded_states)
+                H=dy.concatenate([H,H_bidir])
+            if self.word_emb:
+                H_word_embs=dy.concatenate_cols(encoded_wembs)
+                H=dy.concatenate([H,H_word_embs])
+            H = A * H
         if debug:
             elapsed = time.time()-start
             print('Building attention : ', elapsed)
@@ -246,8 +284,8 @@ class Seq2SeqModel(dy.Saveable):
                 if ds.output() is not None:
                     h = ds.output()
                 else:
-                    h = dy.zeroes((self.dh,))
-                context = dy.transpose(H) * dy.softmax(H * h)
+                    h = dy.zeroes((self.dec_di,))
+                context = dy.transpose(dy.softmax(h * H) * H)
                 ds = ds.add_input(dy.concatenate([embs, context]))
             else:
                 ds = ds.add_input(embs)
@@ -263,7 +301,7 @@ class Seq2SeqModel(dy.Saveable):
 
         return err
 
-    def translate(self, x, decoding='greedy', T=1.0,beam_size=1):
+    def translate(self, x, decoding='greedy', T=1.0, beam_size=1):
         dy.renew_cg()
         input_len = len(x)
         D = dy.parameter(self.D_p)
@@ -281,13 +319,36 @@ class Seq2SeqModel(dy.Saveable):
             es = es.add_input(embs)
             encoded_states.append(es.output())
 
+        if self.bidir:
+            self.rev_enc.set_dropout(self.dr)
+            res = self.rev_enc.initial_state()
+            rev_encoded_states=[]
+            for w in reversed(zip(x, masksx)):
+                embs = dy.lookup_batch(self.MS_p, w)
+                res = res.add_input(embs)
+                rev_encoded_states.append(res.output())
+            rev_encoded_states.reverse()
+            
+        if self.word_emb:
+            encoded_wembs=[]
+            for w in zip(x, masksx):
+                w_embs=dy.lookup_batch(self.W_enc_p, w)
+                encoded_wembs.append(w_embs)
+
         if debug:
             elapsed = time.time()-start
             print('Building encoding : ', elapsed)
             start = time.time()
         # Attend
         if self.att:
-            H = dy.transpose(dy.concatenate_cols(encoded_states)) * A
+            H = dy.concatenate_cols(encoded_states)
+            if self.bidir:
+                H_bidir=dy.concatenate_cols(rev_encoded_states)
+                H=dy.concatenate([H,H_bidir])
+            if self.word_emb:
+                H_word_embs=dy.concatenate_cols(encoded_wembs)
+                H=dy.concatenate([H,H_word_embs])
+            H = A * H
         if debug:
             elapsed = time.time()-start
             print('Building attention : ', elapsed)
@@ -297,17 +358,17 @@ class Seq2SeqModel(dy.Saveable):
         words = []
         beam = []
         for b in range(beam_size):
-            beam.append((self.dec.initial_state(), [widst['SOS']],0.0))
+            beam.append((self.dec.initial_state(), [widst['SOS']], 0.0))
         for i in range(int(min(self.max_len, input_len * 1.5))):
-            new_beam=[]
-            for ds,pw,logprob in beam:
+            new_beam = []
+            for ds, pw, logprob in beam:
                 embs = dy.lookup(self.MT_p, pw[-1])
-                if self.att:
+                if self.att:if self.att:
                     if ds.output() is not None:
                         h = ds.output()
                     else:
-                        h = dy.zeroes((self.dh,))
-                    context = dy.transpose(H) * dy.softmax(H * h)
+                        h = dy.zeroes((self.dec_di,))
+                    context = dy.transpose(dy.softmax(h * H) * H)
                     ds = ds.add_input(dy.concatenate([embs, context]))
                 else:
                     ds = ds.add_input(embs)
@@ -318,9 +379,9 @@ class Seq2SeqModel(dy.Saveable):
                 kbest = np.argsort(p)
                 for b in range(beam_size):
                     nw = kbest[-(b+1)]
-                    new_beam.append((ds,pw + [nw],logprob + np.log(p[nw])))
+                    new_beam.append((ds, pw + [nw], logprob + np.log(p[nw])))
 
-            beam = sorted(new_beam,key=lambda x: x[2])[-beam_size:]
+            beam = sorted(new_beam, key=lambda x: x[2])[-beam_size:]
 
             if beam[-1][1][-1] == widst['EOS']:
                 break
@@ -332,10 +393,10 @@ class Seq2SeqModel(dy.Saveable):
         return beam[-1][1]
 
     def get_components(self):
-        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p
+        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc
 
     def restore_components(self, components):
-        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p = components
+        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc = components
 
 
 if __name__ == '__main__':
@@ -343,11 +404,18 @@ if __name__ == '__main__':
     # ===================================================================
     if verbose:
         print('Reading corpora')
+    # Read training
     trainings_data = read_corpus(args.train_src, widss)
     trainingt_data = read_corpus(args.train_dst, widst)
-    valids_data = read_corpus(args.valid_src, widss)
-    validt_data = read_corpus(args.valid_dst, widst)
-    tests_data = read_corpus(args.test_src, widss, frozen=True)
+    # Add UNKs
+    unk_idx = widss['UNK']
+    unk_idx = widst['UNK']
+    # Read validation
+    valids_data = read_corpus(args.valid_src, widss, frozen=True)
+    validt_data = read_corpus(args.valid_dst, widst, frozen=True)
+    # Read test
+    if args.test:
+        tests_data = read_corpus(args.test_src, widss, frozen=True)
 
     ids2ws = reverse_dic(widss)
     ids2wt = reverse_dic(widst)
@@ -367,10 +435,11 @@ if __name__ == '__main__':
                            len(widss),
                            len(widst),
                            attention=args.attention,
+                           bidir=args.bidir,
+                           word_emb=args.word_emb
                            dropout=args.dropout_rate,
                            max_len=args.max_len)
         model_file = args.exp_name+'_model.txt'
-
 
     trainer = dy.SimpleSGDTrainer(m, args.learning_rate, args.learning_rate_decay)
 
@@ -437,12 +506,12 @@ if __name__ == '__main__':
                     test_start = time.time()
                     with open(args.test_out, 'w+') as of:
                         for x in tests_data:
-                            y = s2s.translate(x, decoding='beam_search',beam_size=args.beam_size)
+                            y = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
                             translation = ' '.join([ids2wt[w] for w in y])
                             source = ' '.join([ids2ws[w] for w in x])
                             of.write(source + ':' + translation+'\n')
                     test_elapsed = time.time()-test_start
-                    print('Finished running on test set', test_elapsed,'elapsed.')
+                    print('Finished running on test set', test_elapsed, 'elapsed.')
                     sys.stdout.flush()
             trainer.update_epoch()
     # ===================================================================
@@ -451,11 +520,10 @@ if __name__ == '__main__':
         test_start = time.time()
         with open(args.test_out, 'w+') as of:
             for x in tests_data:
-                y = s2s.translate(x, decoding='beam_search',beam_size=args.beam_size)
+                y = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
                 translation = ' '.join([ids2wt[w] for w in y])
                 source = ' '.join([ids2ws[w] for w in x])
                 of.write(source + ':' + translation+'\n')
         test_elapsed = time.time()-test_start
-        print('Finished running on test set', test_elapsed,'elapsed.')
+        print('Finished running on test set', test_elapsed, 'elapsed.')
         sys.stdout.flush()
-
