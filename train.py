@@ -36,6 +36,8 @@ parser.add_argument('--num_epochs', '-ne',
                     type=int, help='Number of epochs', default=1)
 parser.add_argument('--batch_size', '-bs',
                     type=int, help='minibatch size', default=20)
+parser.add_argument('--dev_batch_size', '-dbs',
+                    type=int, help='minibatch size for the validation set',default=10)
 parser.add_argument('--emb_dim', '-de',
                     type=int, help='embedding size', default=256)
 parser.add_argument('--hidden_dim', '-dh',
@@ -441,7 +443,7 @@ if __name__ == '__main__':
         model_file = args.exp_name+'_model.txt'
 
     trainer = dy.SimpleSGDTrainer(m, args.learning_rate, args.learning_rate_decay)
-    trainer.set_clip_threshold(args.batch_size)
+    trainer.set_clip_threshold(1.0)
     # ===================================================================
     if verbose:
         print_config()
@@ -453,7 +455,7 @@ if __name__ == '__main__':
         sys.stdout.flush()
     trainbatchloader = BatchLoader(
         trainings_data, trainingt_data, args.batch_size)
-    devbatchloader = BatchLoader(valids_data, validt_data, args.batch_size)
+    devbatchloader = BatchLoader(valids_data, validt_data, args.dev_batch_size)
 
     # ===================================================================
     if args.train:
@@ -464,8 +466,9 @@ if __name__ == '__main__':
         start = time.time()
         processed = 0
         best_dev_loss = np.inf
+        i=0
         for epoch in range(args.num_epochs):
-            for i, (x, y) in enumerate(trainbatchloader):
+            for x, y in trainbatchloader:
                 processed += sum(map(len, y))
                 loss = s2s.calculate_loss(x, y)
                 loss.backward()
@@ -513,6 +516,7 @@ if __name__ == '__main__':
                     test_elapsed = time.time()-test_start
                     print('Finished running on test set', test_elapsed, 'elapsed.')
                     sys.stdout.flush()
+                i=i+1
             trainer.update_epoch()
     # ===================================================================
     if args.test:
