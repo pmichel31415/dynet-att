@@ -58,9 +58,6 @@ parser.add_argument('--max_len', '-ml', type=int,
                     help='Maximum length of generated sentences', default=60)
 parser.add_argument('--beam_size', '-bm', type=int,
                     help='Beam size for beam search', default=1)
-parser.add_argument("--attention", '-att',
-                    help="Use attention",
-                    action="store_true")
 parser.add_argument("--exp_name", '-en', type=str, required=True,
                     help='Name of the experiment (used so save the model)')
 parser.add_argument("--bidir", '-bid',
@@ -165,7 +162,6 @@ class Seq2SeqModel(dy.Saveable):
                  hidden_dim,
                  source_vocab_size,
                  target_vocab_size,
-                 attention=False,
                  bidir=False,
                  word_emb=False,
                  dropout=0.0,
@@ -173,7 +169,6 @@ class Seq2SeqModel(dy.Saveable):
         # Store config
         self.di, self.dh = input_dim, hidden_dim
         self.vs, self.vt = source_vocab_size, target_vocab_size
-        self.att = attention
         self.bidir = bidir
         self.word_emb = word_emb
         self.dr = dropout
@@ -182,12 +177,13 @@ class Seq2SeqModel(dy.Saveable):
         self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
         self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
         self.W_enc_p = model.add_lookup_parameters((self.vs, self.di))
-        self.dec_di = self.di + (self.dh if self.att else 0) + (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
+        self.dec_di = self.di + self.dh + (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
         self.dec = dy.VanillaLSTMBuilder(1, self.dec_di, self.dh, model)
         self.A_p = model.add_parameters((self.dh, self.dec_di - self.di))
         self.MS_p = model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = model.add_lookup_parameters((self.vt, self.di))
-        self.D_p = model.add_parameters((self.vt, self.dh))
+        self.D_di = 2 * self.dh + (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
+        self.D_p = model.add_parameters((self.vt, self.D_di))
         self.b_p = model.add_parameters((self.vt,))
 
         self.max_len = max_len
@@ -268,35 +264,38 @@ class Seq2SeqModel(dy.Saveable):
             print('Building encoding : ', elapsed)
             start = time.time()
         # Attend
-        if self.att:
-            H = dy.concatenate_cols(encoded_states)
-            if self.bidir:
-                H_bidir=dy.concatenate_cols(rev_encoded_states)
-                H=dy.concatenate([H,H_bidir])
-            if self.word_emb:
-                H_word_embs=dy.concatenate_cols(encoded_wembs)
-                H=dy.concatenate([H,H_word_embs])
+        H = dy.concatenate_cols(encoded_states)
+        if self.bidir:
+            H_bidir=dy.concatenate_cols(rev_encoded_states)
+            H=dy.concatenate([H,H_bidir])
+        if self.word_emb:
+            H_word_embs=dy.concatenate_cols(encoded_wembs)
+            H=dy.concatenate([H,H_word_embs])
         if debug:
             elapsed = time.time()-start
             print('Building attention : ', elapsed)
             start = time.time()
         # Decode
+        # Initialize decoder
         start = dy.lookup_batch(self.MT_p,[widst['SOS']] * bsize)
         start = dy.concatenate([start,dy.zeroes((self.dec_di-self.di,),batch_size=bsize)])
         ds = ds.add_input(start)
+        # Compute context
+        h = ds.output()
+        context = H * dy.softmax(dy.transpose(A * H) * h)
+        # Loop
         for cw, nw, mask in zip(y, y[1:], masksy[1:]):
             embs = dy.lookup_batch(self.MT_p, cw)
-            if self.att:
-                h = ds.output()
-                context = H * dy.softmax(dy.transpose(A * H) * h)
-                ds = ds.add_input(dy.concatenate([embs, context]))
-            else:
-                ds = ds.add_input(embs)
-            s = D * ds.output() + b
+            # Run LSTM
+            ds = ds.add_input(dy.concatenate([embs, context]))
+            # Compute next context
+            h = ds.output()
+            context = H * dy.softmax(dy.transpose(A * H) * h)
+            # Get distribution over words
+            s = D * dy.concatenate([h, context]) + b
             masksy_e = dy.reshape(dy.inputVector(mask), (1,), batch_size=bsize)
             err = dy.cmult(dy.pickneglogsoftmax_batch(s, nw), masksy_e)
             errs.append(err)
-            # print(cw,nw,mask)
         if debug:
             elapsed = time.time()-start
             print('Building decoding : ', elapsed)
@@ -344,14 +343,13 @@ class Seq2SeqModel(dy.Saveable):
             print('Building encoding : ', elapsed)
             start = time.time()
         # Attend
-        if self.att:
-            H = dy.concatenate_cols(encoded_states)
-            if self.bidir:
-                H_bidir=dy.concatenate_cols(rev_encoded_states)
-                H=dy.concatenate([H,H_bidir])
-            if self.word_emb:
-                H_word_embs=dy.concatenate_cols(encoded_wembs)
-                H=dy.concatenate([H,H_word_embs])
+        H = dy.concatenate_cols(encoded_states)
+        if self.bidir:
+            H_bidir=dy.concatenate_cols(rev_encoded_states)
+            H=dy.concatenate([H,H_bidir])
+        if self.word_emb:
+            H_word_embs=dy.concatenate_cols(encoded_wembs)
+            H=dy.concatenate([H,H_word_embs])
         if debug:
             elapsed = time.time()-start
             print('Building attention : ', elapsed)
@@ -363,36 +361,40 @@ class Seq2SeqModel(dy.Saveable):
         start = dy.lookup(self.MT_p, widst['SOS'])
         start = dy.concatenate([start,dy.zeroes((self.dec_di - self.di,))])
         ds = ds.add_input(start)
-        beam.append((ds, [widst['SOS']], 0.0))
+        # Compute context
+        h = ds.output()
+        context = H * dy.softmax(dy.transpose(A * H) * h)
+        # Initialize beam
+        beam.append((ds,context, [widst['SOS']], 0.0))
+        # Loop
         for i in range(int(min(self.max_len, input_len * 1.5))):
             new_beam = []
-            for ds, pw, logprob in beam:
+            for ds,pc, pw, logprob in beam:
                 embs = dy.lookup(self.MT_p, pw[-1])
-                if self.att:
-                    h = ds.output()
-                    context = H * dy.softmax(dy.transpose(A * H) * h)
-                    ds = ds.add_input(dy.concatenate([embs, context]))
-                else:
-                    ds = ds.add_input(embs)
-                s = D * ds.output() + b
+                # Run LSTM
+                ds = ds.add_input(dy.concatenate([embs, pc]))
+                # Compute next context
+                h = ds.output()
+                context = H * dy.softmax(dy.transpose(A * H) * h)
+                # Get distribution over words
+                s = D * dy.concatenate([h, context]) + b
                 p = dy.softmax(s * (1 / T)).npvalue()
                 # Careful of float error
                 p = p/p.sum()
                 kbest = np.argsort(p)
-                for b in range(beam_size):
-                    nw = kbest[-(b+1)]
-                    new_beam.append((ds, pw + [nw], logprob + np.log(p[nw])))
+                for nw in kbest[-beam_size:]:
+                    new_beam.append((ds, context, pw + [nw], logprob + np.log(p[nw])))
 
-            beam = sorted(new_beam, key=lambda x: x[2])[-beam_size:]
+            beam = sorted(new_beam, key=lambda x: x[-1])[-beam_size:]
 
-            if beam[-1][1][-1] == widst['EOS']:
+            if beam[-1][2][-1] == widst['EOS']:
                 break
 
         if debug:
             elapsed = time.time()-start
             print('Decoding : ', elapsed)
 
-        return beam[-1][1]
+        return beam[-1][2]
 
     def get_components(self):
         return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p, self.b_p
@@ -435,7 +437,6 @@ if __name__ == '__main__':
                            args.hidden_dim,
                            len(widss),
                            len(widst),
-                           attention=args.attention,
                            bidir=args.bidir,
                            word_emb=args.word_emb,
                            dropout=args.dropout_rate,
