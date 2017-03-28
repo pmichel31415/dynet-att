@@ -155,7 +155,7 @@ class BatchLoader(object):
 
 
 class Seq2SeqModel(dy.Saveable):
-
+""
     def __init__(self,
                  model,
                  input_dim,
@@ -176,7 +176,6 @@ class Seq2SeqModel(dy.Saveable):
         # Declare parameters
         self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
         self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
-        self.W_enc_p = model.add_lookup_parameters((self.vs, self.di))
         self.dec_di = self.di + self.dh + (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
         self.dec = dy.VanillaLSTMBuilder(1, self.dec_di, self.dh, model)
         self.A_p = model.add_parameters((self.dh, self.dec_di - self.di))
@@ -232,11 +231,18 @@ class Seq2SeqModel(dy.Saveable):
             elapsed = time.time()-start
             print('Preprocessing took : ', elapsed)
             start = time.time()
+
+        if self.word_emb:
+            encoded_wembs=[]
+
+        for w in x:
+            embs = dy.lookup(self.MS_p, w)
         for iw, mask in zip(x, masksx):
             embs = dy.lookup_batch(self.MS_p, iw)
+            masksx_e = dy.inputTensor(mask, batched=True)
+            if self.word_emb:
+                encoded_wembs.append(dy.cmult(masksx_e,embs))
             es = es.add_input(embs)
-            masksx_e = dy.reshape(
-                dy.inputMatrix(mask.flatten(order='F'), (self.dh, bsize)), (self.dh,), batch_size=bsize)
             encoded_states.append(dy.cmult(masksx_e, es.output()))
 
         if self.bidir:
@@ -246,8 +252,7 @@ class Seq2SeqModel(dy.Saveable):
             for iw, mask in reversed(zip(x, masksx)):
                 embs = dy.lookup_batch(self.MS_p, iw)
                 res = res.add_input(embs)
-                masksx_e = dy.reshape(
-                    dy.inputMatrix(mask.flatten(order='F'), (self.dh, bsize)), (self.dh,), batch_size=bsize)
+                masksx_e = dy.inputTensor(mask, batched=True)
                 rev_encoded_states.append(dy.cmult(masksx_e, res.output()))
             rev_encoded_states.reverse()
             
@@ -255,8 +260,7 @@ class Seq2SeqModel(dy.Saveable):
             encoded_wembs=[]
             for iw, mask in zip(x, masksx):
                 w_embs=dy.lookup_batch(self.W_enc_p, iw)
-                masksx_e = dy.reshape(
-                    dy.inputMatrix(mask.flatten(order='F'), (self.dh, bsize)), (self.dh,), batch_size=bsize)
+                masksx_e = dy.inputTensor(mask, batched=True)
                 encoded_wembs.append(dy.cmult(masksx_e,w_embs))
 
         if debug:
@@ -293,7 +297,7 @@ class Seq2SeqModel(dy.Saveable):
             context = H * dy.softmax(dy.transpose(A * H) * h)
             # Get distribution over words
             s = D * dy.concatenate([h, context]) + b
-            masksy_e = dy.reshape(dy.inputVector(mask), (1,), batch_size=bsize)
+            masksx_e = dy.inputTensor(mask, batched=True)
             err = dy.cmult(dy.pickneglogsoftmax_batch(s, nw), masksy_e)
             errs.append(err)
         if debug:
@@ -317,8 +321,14 @@ class Seq2SeqModel(dy.Saveable):
         # Encode
         if debug:
             start = time.time()
+
+        if self.word_emb:
+            encoded_wembs=[]
+
         for w in x:
             embs = dy.lookup(self.MS_p, w)
+            if self.word_emb:
+                encoded_wembs.append(embs)
             es = es.add_input(embs)
             encoded_states.append(es.output())
 
@@ -332,11 +342,6 @@ class Seq2SeqModel(dy.Saveable):
                 rev_encoded_states.append(res.output())
             rev_encoded_states.reverse()
             
-        if self.word_emb:
-            encoded_wembs=[]
-            for w in x:
-                w_embs=dy.lookup(self.W_enc_p, w)
-                encoded_wembs.append(w_embs)
 
         if debug:
             elapsed = time.time()-start
@@ -397,10 +402,10 @@ class Seq2SeqModel(dy.Saveable):
         return beam[-1][2]
 
     def get_components(self):
-        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p, self.b_p
+        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.b_p
 
     def restore_components(self, components):
-        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.W_enc_p, self.b_p = components
+        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.b_p = components
 
 
 if __name__ == '__main__':
