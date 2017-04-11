@@ -37,7 +37,7 @@ parser.add_argument('--num_epochs', '-ne',
 parser.add_argument('--batch_size', '-bs',
                     type=int, help='minibatch size', default=20)
 parser.add_argument('--dev_batch_size', '-dbs',
-                    type=int, help='minibatch size for the validation set',default=10)
+                    type=int, help='minibatch size for the validation set', default=10)
 parser.add_argument('--emb_dim', '-de',
                     type=int, help='embedding size', default=256)
 parser.add_argument('--hidden_dim', '-dh',
@@ -155,7 +155,7 @@ class BatchLoader(object):
 
 
 class Seq2SeqModel(dy.Saveable):
-""
+
     def __init__(self,
                  model,
                  input_dim,
@@ -176,12 +176,14 @@ class Seq2SeqModel(dy.Saveable):
         # Declare parameters
         self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
         self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
-        self.dec_di = self.di + self.dh + (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
+        self.dec_di = self.di + self.dh + \
+            (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
         self.dec = dy.VanillaLSTMBuilder(1, self.dec_di, self.dh, model)
         self.A_p = model.add_parameters((self.dh, self.dec_di - self.di))
         self.MS_p = model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = model.add_lookup_parameters((self.vt, self.di))
-        self.D_di = 2 * self.dh + (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
+        self.D_di = 2 * self.dh + (self.dh if self.bidir else 0) + \
+            (self.di if self.word_emb else 0)
         self.D_p = model.add_parameters((self.vt, self.D_di))
         self.b_p = model.add_parameters((self.vt,))
 
@@ -233,35 +235,28 @@ class Seq2SeqModel(dy.Saveable):
             start = time.time()
 
         if self.word_emb:
-            encoded_wembs=[]
+            encoded_wembs = []
 
         for w in x:
-            embs = dy.lookup(self.MS_p, w)
+            embs = dy.lookup_batch(self.MS_p, w)
         for iw, mask in zip(x, masksx):
             embs = dy.lookup_batch(self.MS_p, iw)
             masksx_e = dy.inputTensor(mask, batched=True)
             if self.word_emb:
-                encoded_wembs.append(dy.cmult(masksx_e,embs))
+                encoded_wembs.append(dy.cmult(masksx_e, embs))
             es = es.add_input(embs)
             encoded_states.append(dy.cmult(masksx_e, es.output()))
 
         if self.bidir:
             self.rev_enc.set_dropout(self.dr)
             res = self.rev_enc.initial_state()
-            rev_encoded_states=[]
+            rev_encoded_states = []
             for iw, mask in reversed(zip(x, masksx)):
                 embs = dy.lookup_batch(self.MS_p, iw)
                 res = res.add_input(embs)
                 masksx_e = dy.inputTensor(mask, batched=True)
                 rev_encoded_states.append(dy.cmult(masksx_e, res.output()))
             rev_encoded_states.reverse()
-            
-        if self.word_emb:
-            encoded_wembs=[]
-            for iw, mask in zip(x, masksx):
-                w_embs=dy.lookup_batch(self.W_enc_p, iw)
-                masksx_e = dy.inputTensor(mask, batched=True)
-                encoded_wembs.append(dy.cmult(masksx_e,w_embs))
 
         if debug:
             elapsed = time.time()-start
@@ -270,19 +265,19 @@ class Seq2SeqModel(dy.Saveable):
         # Attend
         H = dy.concatenate_cols(encoded_states)
         if self.bidir:
-            H_bidir=dy.concatenate_cols(rev_encoded_states)
-            H=dy.concatenate([H,H_bidir])
+            H_bidir = dy.concatenate_cols(rev_encoded_states)
+            H = dy.concatenate([H, H_bidir])
         if self.word_emb:
-            H_word_embs=dy.concatenate_cols(encoded_wembs)
-            H=dy.concatenate([H,H_word_embs])
+            H_word_embs = dy.concatenate_cols(encoded_wembs)
+            H = dy.concatenate([H, H_word_embs])
         if debug:
             elapsed = time.time()-start
             print('Building attention : ', elapsed)
             start = time.time()
         # Decode
         # Initialize decoder
-        start = dy.lookup_batch(self.MT_p,[widst['SOS']] * bsize)
-        start = dy.concatenate([start,dy.zeroes((self.dec_di-self.di,),batch_size=bsize)])
+        start = dy.lookup_batch(self.MT_p, [widst['SOS']] * bsize)
+        start = dy.concatenate([start, dy.zeroes((self.dec_di-self.di,), batch_size=bsize)])
         ds = ds.add_input(start)
         # Compute context
         h = ds.output()
@@ -297,7 +292,7 @@ class Seq2SeqModel(dy.Saveable):
             context = H * dy.softmax(dy.transpose(A * H) * h)
             # Get distribution over words
             s = D * dy.concatenate([h, context]) + b
-            masksx_e = dy.inputTensor(mask, batched=True)
+            masksy_e = dy.inputTensor(mask, batched=True)
             err = dy.cmult(dy.pickneglogsoftmax_batch(s, nw), masksy_e)
             errs.append(err)
         if debug:
@@ -323,10 +318,10 @@ class Seq2SeqModel(dy.Saveable):
             start = time.time()
 
         if self.word_emb:
-            encoded_wembs=[]
+            encoded_wembs = []
 
         for w in x:
-            embs = dy.lookup(self.MS_p, w)
+            embs = dy.lookup_batch(self.MS_p, w)
             if self.word_emb:
                 encoded_wembs.append(embs)
             es = es.add_input(embs)
@@ -335,13 +330,12 @@ class Seq2SeqModel(dy.Saveable):
         if self.bidir:
             self.rev_enc.disable_dropout()
             res = self.rev_enc.initial_state()
-            rev_encoded_states=[]
+            rev_encoded_states = []
             for w in reversed(x):
-                embs = dy.lookup(self.MS_p, w)
+                embs = dy.lookup_batch(self.MS_p, w)
                 res = res.add_input(embs)
                 rev_encoded_states.append(res.output())
             rev_encoded_states.reverse()
-            
 
         if debug:
             elapsed = time.time()-start
@@ -350,11 +344,11 @@ class Seq2SeqModel(dy.Saveable):
         # Attend
         H = dy.concatenate_cols(encoded_states)
         if self.bidir:
-            H_bidir=dy.concatenate_cols(rev_encoded_states)
-            H=dy.concatenate([H,H_bidir])
+            H_bidir = dy.concatenate_cols(rev_encoded_states)
+            H = dy.concatenate([H, H_bidir])
         if self.word_emb:
-            H_word_embs=dy.concatenate_cols(encoded_wembs)
-            H=dy.concatenate([H,H_word_embs])
+            H_word_embs = dy.concatenate_cols(encoded_wembs)
+            H = dy.concatenate([H, H_word_embs])
         if debug:
             elapsed = time.time()-start
             print('Building attention : ', elapsed)
@@ -364,17 +358,17 @@ class Seq2SeqModel(dy.Saveable):
         words = []
         beam = []
         start = dy.lookup(self.MT_p, widst['SOS'])
-        start = dy.concatenate([start,dy.zeroes((self.dec_di - self.di,))])
+        start = dy.concatenate([start, dy.zeroes((self.dec_di - self.di,))])
         ds = ds.add_input(start)
         # Compute context
         h = ds.output()
         context = H * dy.softmax(dy.transpose(A * H) * h)
         # Initialize beam
-        beam.append((ds,context, [widst['SOS']], 0.0))
+        beam.append((ds, context, [widst['SOS']], 0.0))
         # Loop
         for i in range(int(min(self.max_len, input_len * 1.5))):
             new_beam = []
-            for ds,pc, pw, logprob in beam:
+            for ds, pc, pw, logprob in beam:
                 embs = dy.lookup(self.MT_p, pw[-1])
                 # Run LSTM
                 ds = ds.add_input(dy.concatenate([embs, pc]))
@@ -448,8 +442,8 @@ if __name__ == '__main__':
                            max_len=args.max_len)
         model_file = args.exp_name+'_model.txt'
 
-    trainer = dy.SimpleSGDTrainer(m, args.learning_rate, args.learning_rate_decay)
-    trainer.set_clip_threshold(1.0)
+    trainer = dy.RMSPropTrainer(m, e0=args.learning_rate, edecay=args.learning_rate_decay)
+    trainer.set_clip_threshold(-1)
     # ===================================================================
     if verbose:
         print_config()
@@ -459,8 +453,7 @@ if __name__ == '__main__':
     if verbose:
         print('Creating batch loaders')
         sys.stdout.flush()
-    trainbatchloader = BatchLoader(
-        trainings_data, trainingt_data, args.batch_size)
+    trainbatchloader = BatchLoader(trainings_data, trainingt_data, args.batch_size)
     devbatchloader = BatchLoader(valids_data, validt_data, args.dev_batch_size)
 
     # ===================================================================
@@ -472,7 +465,7 @@ if __name__ == '__main__':
         start = time.time()
         processed = 0
         best_dev_loss = np.inf
-        i=0
+        i = 0
         for epoch in range(args.num_epochs):
             for x, y in trainbatchloader:
                 processed += sum(map(len, y))
@@ -505,7 +498,7 @@ if __name__ == '__main__':
                     print("[epoch %d] Dev loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
                           (epoch, dev_logloss, dev_ppl, dev_elapsed, dev_processed))
                     if dev_ppl < best_dev_loss:
-                        best_dev_loss=dev_ppl
+                        best_dev_loss = dev_ppl
                         print('Best dev error up to date, saving model to', model_file)
                         m.save(model_file, [s2s])
                     sys.stdout.flush()
@@ -522,7 +515,7 @@ if __name__ == '__main__':
                     test_elapsed = time.time()-test_start
                     print('Finished running on test set', test_elapsed, 'elapsed.')
                     sys.stdout.flush()
-                i=i+1
+                i = i+1
             trainer.update_epoch()
     # ===================================================================
     if args.test:
