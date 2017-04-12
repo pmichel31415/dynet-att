@@ -321,7 +321,7 @@ class Seq2SeqModel(dy.Saveable):
             encoded_wembs = []
 
         for w in x:
-            embs = dy.lookup_batch(self.MS_p, w)
+            embs = dy.lookup(self.MS_p, w)
             if self.word_emb:
                 encoded_wembs.append(embs)
             es = es.add_input(embs)
@@ -332,7 +332,7 @@ class Seq2SeqModel(dy.Saveable):
             res = self.rev_enc.initial_state()
             rev_encoded_states = []
             for w in reversed(x):
-                embs = dy.lookup_batch(self.MS_p, w)
+                embs = dy.lookup(self.MS_p, w)
                 res = res.add_input(embs)
                 rev_encoded_states.append(res.output())
             rev_encoded_states.reverse()
