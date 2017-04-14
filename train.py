@@ -298,7 +298,7 @@ class Seq2SeqModel(dy.Saveable):
         if debug:
             elapsed = time.time()-start
             print('Building decoding : ', elapsed)
-        err = dy.sum_batches(dy.esum(errs))
+        err = dy.sum_batches(dy.esum(errs)) / bsize
 
         return err
 
@@ -474,7 +474,7 @@ if __name__ == '__main__':
                 trainer.update()
                 train_loss += loss.scalar_value()
                 if (i+1) % args.check_train_error_every == 0:
-                    logloss = train_loss / processed
+                    logloss = train_loss / processed * batch_size
                     ppl = np.exp(logloss)
                     elapsed = time.time()-start
                     trainer.status()
