@@ -203,9 +203,9 @@ class Seq2SeqModel(dy.Saveable):
         masksx = np.ones((input_len, self.di, bsize), dtype=float)
         for i in range(bsize):
             srci = src[i][:]
-            masksx[:-len(srci), i] = 0.0
+            masksx[len(srci):, i] = 0.0
             while len(srci) < input_len:
-                srci.insert(0, widss['SOS'])
+                srci.append(widss['EOS'])
             x[:, i] = srci
         y = np.zeros((output_len, bsize), dtype=int)
 
@@ -442,7 +442,7 @@ if __name__ == '__main__':
                            max_len=args.max_len)
         model_file = args.exp_name+'_model.txt'
 
-    trainer = dy.RMSPropTrainer(m, e0=args.learning_rate, edecay=args.learning_rate_decay)
+    trainer = dy.MomentumSGDTrainer(m, e0=args.learning_rate, edecay=args.learning_rate_decay)
     trainer.set_clip_threshold(-1)
     # ===================================================================
     if verbose:
