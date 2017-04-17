@@ -12,9 +12,6 @@ import sys
 CHECK_TRAIN_ERROR_EVERY = 10
 CHECK_VALID_ERROR_EVERY = 1000
 
-widss = defaultdict(lambda: len(widss))
-widst = defaultdict(lambda: len(widst))
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--dynet-seed", default=0, type=int)
 parser.add_argument("--dynet-mem", default=512, type=int)
@@ -34,6 +31,10 @@ parser.add_argument("--test_out", '-teo',
 parser.add_argument("--model", '-m', type=str, help='Model to load from')
 parser.add_argument('--num_epochs', '-ne',
                     type=int, help='Number of epochs', default=1)
+parser.add_argument('--src_vocab_size', '-svs',
+                    type=int, help='Maximum vocab size of the source language', default=40000)
+parser.add_argument('--trg_vocab_size', '-tvs',
+                    type=int, help='Maximum vocab size of the target language', default=20000)
 parser.add_argument('--batch_size', '-bs',
                     type=int, help='minibatch size', default=20)
 parser.add_argument('--dev_batch_size', '-dbs',
@@ -95,22 +96,37 @@ def reverse_dic(dic):
         rev_dic[v] = k
     return rev_dic
 
+def read_dic(file,max_size=20000,min_freq=1):
+    dic = defaultdict(lambda: 0)
+    freqs = defaultdict(lambda: 0)
+    dic['UNK'],dic['SOS'],dic['EOS']=0,1,2
+    with open(file, 'r') as f:
+        for l in f:
+            sent = l.strip().split()
+            for word in sent:
+                freqs[word] += 1
 
-def read_corpus(file, dic, frozen=False):
+    sorted_words = sorted(freqs.iteritems(), key=lambda x : x[1], reverse=True)
+    for i in range(max_size):
+        word, freq = sorted_words[i]
+        if freq<=min_freq:
+            continue
+        dic[word]=len(dic)
+
+    return dic, reverse_dic(dic)
+
+def read_corpus(file, dic):
     # for each line in the file, split the words and turn them into IDs like
     # this:
     sentences = []
     with open(file, 'r') as f:
         for l in f:
             sent = [dic['SOS']]
-            if frozen:
-                for w in l.split():
-                    if w not in dic:
-                        sent.append(dic['UNK'])
-                    else:
-                        sent.append(dic[w])
-            else:
-                sent += [dic[w] for w in l.split()]
+            for w in l.split():
+                if w not in dic:
+                    sent.append(dic['UNK'])
+                else:
+                    sent.append(dic[w])
             sent.append(dic['EOS'])
             sentences.append(sent)
     return sentences
@@ -128,25 +144,37 @@ def print_config():
 class BatchLoader(object):
 
     def __init__(self, datas, datat, bsize):
-        self.datas = np.asarray(datas, dtype=list)
-        self.datat = np.asarray(datat, dtype=list)
-        self.n = len(self.datas)
+        self.batches=[]
+
         self.bs = bsize
-        self.order = np.arange(self.n, dtype=int)
+
+        # Bucket samples by source sentence length
+        buckets=defaultdict(list)
+        for src,trg in zip(datas,datat):
+            buckets[len(src)].append((src,trg))
+        
+        for src_len, bucket in buckets.iteritems():
+            np.random.shuffle(bucket)
+            num_batches = int(np.ceil(len(bucket) * 1.0 / self.bs))
+            for i in range(num_batches):
+                cur_batch_size = self.bs if i < num_batches - 1 else len(bucket) - self.bs * i
+                self.batches.append(([bucket[i * self.bs + j][0] for j in range(cur_batch_size)],
+                               [bucket[i * self.bs + j][1] for j in range(cur_batch_size)]))
+
+        self.n = len(self.batches)
         self.reseed()
 
     def reseed(self):
         print('Reseeding the dataset')
         self.i = 0
-        np.random.shuffle(self.order)
+        np.random.shuffle(self.batches)
 
     def next(self):
-        if self.i >= self.n:
+        if self.i >= self.n - 1:
             self.reseed()
             raise StopIteration()
-        idxs = self.order[self.i:min(self.i + self.bs, self.n)]
-        self.i += self.bs
-        return self.datas[idxs], self.datat[idxs]
+        self.i += 1
+        return self.batches[self.i]
 
     def __next__(self):
         return self.next()
@@ -234,27 +262,14 @@ class Seq2SeqModel(dy.Saveable):
             print('Preprocessing took : ', elapsed)
             start = time.time()
 
-        if self.word_emb:
-            encoded_wembs = []
+        wembs = [dy.lookup_batch(self.MS_p, iw) for iw in x]
 
-        for w in x:
-            embs = dy.lookup_batch(self.MS_p, w)
-        for iw in x:
-            embs = dy.lookup_batch(self.MS_p, iw)
-            if self.word_emb:
-                encoded_wembs.append(embs)
-            es = es.add_input(embs)
-            encoded_states.append(es.output())
+        encoded_states = es.transduce(wembs)
 
         if self.bidir:
             self.rev_enc.set_dropout(self.dr)
             res = self.rev_enc.initial_state()
-            rev_encoded_states = []
-            for iw in reversed(x):
-                embs = dy.lookup_batch(self.MS_p, iw)
-                res = res.add_input(embs)
-                rev_encoded_states.append(res.output())
-            rev_encoded_states.reverse()
+            rev_encoded_states = res.transduce(wembs[::-1])[::-1]
 
         if debug:
             elapsed = time.time()-start
@@ -266,7 +281,7 @@ class Seq2SeqModel(dy.Saveable):
             H_bidir = dy.concatenate_cols(rev_encoded_states)
             H = dy.concatenate([H, H_bidir])
         if self.word_emb:
-            H_word_embs = dy.concatenate_cols(encoded_wembs)
+            H_word_embs = dy.concatenate_cols(wembs)
             H = dy.concatenate([H, H_word_embs])
         if debug:
             elapsed = time.time()-start
@@ -289,7 +304,7 @@ class Seq2SeqModel(dy.Saveable):
             h = ds.output()
             context = H * dy.softmax(dy.transpose(A * H) * h)
             # Get distribution over words
-            s = D * dy.concatenate([h, context]) + b
+            s = dy.affine_transform([b,D,dy.concatenate([h, context])])
             masksy_e = dy.inputTensor(mask, batched=True)
             err = dy.cmult(dy.pickneglogsoftmax_batch(s, nw), masksy_e)
             errs.append(err)
@@ -314,26 +329,15 @@ class Seq2SeqModel(dy.Saveable):
         # Encode
         if debug:
             start = time.time()
+        
+        wembs = [dy.lookup(self.MS_p, iw) for iw in x]
 
-        if self.word_emb:
-            encoded_wembs = []
-
-        for w in x:
-            embs = dy.lookup(self.MS_p, w)
-            if self.word_emb:
-                encoded_wembs.append(embs)
-            es = es.add_input(embs)
-            encoded_states.append(es.output())
+        encoded_states = es.transduce(wembs)
 
         if self.bidir:
-            self.rev_enc.disable_dropout()
+            self.rev_enc.set_dropout(self.dr)
             res = self.rev_enc.initial_state()
-            rev_encoded_states = []
-            for w in reversed(x):
-                embs = dy.lookup(self.MS_p, w)
-                res = res.add_input(embs)
-                rev_encoded_states.append(res.output())
-            rev_encoded_states.reverse()
+            rev_encoded_states = res.transduce(wembs[::-1])[::-1]
 
         if debug:
             elapsed = time.time()-start
@@ -374,8 +378,8 @@ class Seq2SeqModel(dy.Saveable):
                 h = ds.output()
                 context = H * dy.softmax(dy.transpose(A * H) * h)
                 # Get distribution over words
-                s = D * dy.concatenate([h, context]) + b
-                p = dy.softmax(s * (1 / T)).npvalue()
+                s = dy.affine_transform([b,D,dy.concatenate([h, context])])
+                p = dy.softmax(s * (1 / T)).npvalue().flatten()
                 # Careful of float error
                 p = p/p.sum()
                 kbest = np.argsort(p)
@@ -405,6 +409,9 @@ if __name__ == '__main__':
     # ===================================================================
     if verbose:
         print('Reading corpora')
+    # Read vocabs
+    widss, ids2ws = read_dic(args.train_src,max_size=args.src_vocab_size)
+    widst, ids2wt = read_dic(args.train_dst,max_size=args.trg_vocab_size)
     # Read training
     trainings_data = read_corpus(args.train_src, widss)
     trainingt_data = read_corpus(args.train_dst, widst)
@@ -412,13 +419,10 @@ if __name__ == '__main__':
     unk_idx = widss['UNK']
     unk_idx = widst['UNK']
     # Read validation
-    valids_data = read_corpus(args.valid_src, widss, frozen=True)
-    validt_data = read_corpus(args.valid_dst, widst, frozen=True)
+    valids_data = read_corpus(args.valid_src, widss)
+    validt_data = read_corpus(args.valid_dst, widst)
     # Read test
-    tests_data = read_corpus(args.test_src, widss, frozen=True)
-
-    ids2ws = reverse_dic(widss)
-    ids2wt = reverse_dic(widst)
+    tests_data = read_corpus(args.test_src, widss)
 
     # ===================================================================
     if verbose:
@@ -460,11 +464,11 @@ if __name__ == '__main__':
             print('starting training')
             sys.stdout.flush()
         train_loss = 0
-        start = time.time()
         processed = 0
         best_dev_loss = np.inf
         i = 0
         for epoch in range(args.num_epochs):
+            start = time.time()
             for x, y in trainbatchloader:
                 processed += sum(map(len, y))
                 loss = s2s.calculate_loss(x, y)
