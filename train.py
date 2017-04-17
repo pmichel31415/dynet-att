@@ -440,7 +440,7 @@ if __name__ == '__main__':
                            max_len=args.max_len)
         model_file = args.exp_name+'_model.txt'
 
-    trainer = dy.AdamTrainer(m, e0=args.learning_rate, edecay=args.learning_rate_decay)
+    trainer = dy.AdamTrainer(m, args.learning_rate, edecay=args.learning_rate_decay)
     # trainer.set_clip_threshold(-1)
     # ===================================================================
     if verbose:
