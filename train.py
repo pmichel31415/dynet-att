@@ -174,11 +174,11 @@ class Seq2SeqModel(dy.Saveable):
         self.dr = dropout
 
         # Declare parameters
-        self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
-        self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
+        self.enc = dy.GRUBuilder(1, self.di, self.dh, model)
+        self.rev_enc = dy.GRUBuilder(1, self.di, self.dh, model)
         self.dec_di = self.di + self.dh + \
             (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
-        self.dec = dy.VanillaLSTMBuilder(1, self.dec_di, self.dh, model)
+        self.dec = dy.GRUBuilder(1, self.dec_di, self.dh, model)
         self.A_p = model.add_parameters((self.dh, self.dec_di - self.di))
         self.MS_p = model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = model.add_lookup_parameters((self.vt, self.di))
@@ -239,23 +239,21 @@ class Seq2SeqModel(dy.Saveable):
 
         for w in x:
             embs = dy.lookup_batch(self.MS_p, w)
-        for iw, mask in zip(x, masksx):
+        for iw in x:
             embs = dy.lookup_batch(self.MS_p, iw)
-            masksx_e = dy.inputTensor(mask, batched=True)
             if self.word_emb:
-                encoded_wembs.append(dy.cmult(masksx_e, embs))
+                encoded_wembs.append(embs)
             es = es.add_input(embs)
-            encoded_states.append(dy.cmult(masksx_e, es.output()))
+            encoded_states.append(es.output())
 
         if self.bidir:
             self.rev_enc.set_dropout(self.dr)
             res = self.rev_enc.initial_state()
             rev_encoded_states = []
-            for iw, mask in reversed(zip(x, masksx)):
+            for iw in reversed(x):
                 embs = dy.lookup_batch(self.MS_p, iw)
                 res = res.add_input(embs)
-                masksx_e = dy.inputTensor(mask, batched=True)
-                rev_encoded_states.append(dy.cmult(masksx_e, res.output()))
+                rev_encoded_states.append(res.output())
             rev_encoded_states.reverse()
 
         if debug:
@@ -298,7 +296,7 @@ class Seq2SeqModel(dy.Saveable):
         if debug:
             elapsed = time.time()-start
             print('Building decoding : ', elapsed)
-        err = dy.sum_batches(dy.esum(errs)) / bsize
+        err = dy.sum_batches(dy.esum(errs))
 
         return err
 
@@ -442,8 +440,8 @@ if __name__ == '__main__':
                            max_len=args.max_len)
         model_file = args.exp_name+'_model.txt'
 
-    trainer = dy.MomentumSGDTrainer(m, e0=args.learning_rate, edecay=args.learning_rate_decay)
-    trainer.set_clip_threshold(-1)
+    trainer = dy.AdamTrainer(m, e0=args.learning_rate, edecay=args.learning_rate_decay)
+    # trainer.set_clip_threshold(-1)
     # ===================================================================
     if verbose:
         print_config()
@@ -474,7 +472,7 @@ if __name__ == '__main__':
                 trainer.update()
                 train_loss += loss.scalar_value()
                 if (i+1) % args.check_train_error_every == 0:
-                    logloss = train_loss / processed * batch_size
+                    logloss = train_loss / processed
                     ppl = np.exp(logloss)
                     elapsed = time.time()-start
                     trainer.status()
