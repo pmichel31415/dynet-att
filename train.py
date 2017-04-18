@@ -1,8 +1,9 @@
+from __future__ import print_function, division
+
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-from __future__ import print_function, division
 import numpy as np
 import argparse
 from collections import defaultdict
@@ -505,10 +506,9 @@ if __name__ == '__main__':
                         y_hat = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
                         reference = [ids2wt[w] for w in y[1:-1]]
                         translation = [ids2wt[w] for w in y_hat[1:-1]]
-                        print('##### REFERENCE #####')
-			print(' '.join(reference))
-                        print('#### TRANSLATION ####')
-			print(' '.join(translation))
+                        print('###################')
+			print('REFERENCE :  ',' '.join(reference))
+			print('TRANSLATION :',' '.join(translation))
                         if len(translation)<1:
                             empty=True
                             break
