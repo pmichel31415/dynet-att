@@ -96,24 +96,26 @@ def reverse_dic(dic):
         rev_dic[v] = k
     return rev_dic
 
-def read_dic(file,max_size=20000,min_freq=1):
+
+def read_dic(file, max_size=20000, min_freq=1):
     dic = defaultdict(lambda: 0)
     freqs = defaultdict(lambda: 0)
-    dic['UNK'],dic['SOS'],dic['EOS']=0,1,2
+    dic['UNK'], dic['SOS'], dic['EOS'] = 0, 1, 2
     with open(file, 'r') as f:
         for l in f:
             sent = l.strip().split()
             for word in sent:
                 freqs[word] += 1
 
-    sorted_words = sorted(freqs.iteritems(), key=lambda x : x[1], reverse=True)
+    sorted_words = sorted(freqs.iteritems(), key=lambda x: x[1], reverse=True)
     for i in range(max_size):
         word, freq = sorted_words[i]
-        if freq<=min_freq:
+        if freq <= min_freq:
             continue
-        dic[word]=len(dic)
+        dic[word] = len(dic)
 
     return dic, reverse_dic(dic)
+
 
 def read_corpus(file, dic):
     # for each line in the file, split the words and turn them into IDs like
@@ -144,22 +146,22 @@ def print_config():
 class BatchLoader(object):
 
     def __init__(self, datas, datat, bsize):
-        self.batches=[]
+        self.batches = []
 
         self.bs = bsize
 
         # Bucket samples by source sentence length
-        buckets=defaultdict(list)
-        for src,trg in zip(datas,datat):
-            buckets[len(src)].append((src,trg))
-        
+        buckets = defaultdict(list)
+        for src, trg in zip(datas, datat):
+            buckets[len(src)].append((src, trg))
+
         for src_len, bucket in buckets.iteritems():
             np.random.shuffle(bucket)
             num_batches = int(np.ceil(len(bucket) * 1.0 / self.bs))
             for i in range(num_batches):
                 cur_batch_size = self.bs if i < num_batches - 1 else len(bucket) - self.bs * i
                 self.batches.append(([bucket[i * self.bs + j][0] for j in range(cur_batch_size)],
-                               [bucket[i * self.bs + j][1] for j in range(cur_batch_size)]))
+                                     [bucket[i * self.bs + j][1] for j in range(cur_batch_size)]))
 
         self.n = len(self.batches)
         self.reseed()
@@ -195,94 +197,73 @@ class Seq2SeqModel(dy.Saveable):
                  dropout=0.0,
                  max_len=60):
         # Store config
-        self.di, self.dh = input_dim, hidden_dim
-        self.vs, self.vt = source_vocab_size, target_vocab_size
         self.bidir = bidir
         self.word_emb = word_emb
         self.dr = dropout
-
-        # Declare parameters
-        self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
-        self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
-        self.dec_di = self.di + self.dh + \
-            (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
-        self.dec = dy.VanillaLSTMBuilder(1, self.dec_di, self.dh, model)
-        self.A_p = model.add_parameters((self.dh, self.dec_di - self.di))
-        self.MS_p = model.add_lookup_parameters((self.vs, self.di))
-        self.MT_p = model.add_lookup_parameters((self.vt, self.di))
-        self.D_di = 2 * self.dh + (self.dh if self.bidir else 0) + \
-            (self.di if self.word_emb else 0)
-        self.D_p = model.add_parameters((self.vt, self.D_di))
-        self.b_p = model.add_parameters((self.vt,))
-
         self.max_len = max_len
-
-    def calculate_loss(self, src, trg, test=False):
-        dy.renew_cg()
-
-        bsize = len(src)
-
-        input_len = max(len(s) for s in src)
-        output_len = max(len(s) for s in trg)
-        # Pad
-        if debug:
-            start = time.time()
-        x = np.zeros((input_len, bsize), dtype=int)
-        masksx = np.ones((input_len, self.di, bsize), dtype=float)
-        for i in range(bsize):
-            srci = src[i][:]
-            masksx[len(srci):, i] = 0.0
-            while len(srci) < input_len:
-                srci.append(widss['EOS'])
-            x[:, i] = srci
-        y = np.zeros((output_len, bsize), dtype=int)
-
-        masksy = np.ones((output_len, bsize), dtype=float)
-        for i in range(bsize):
-            trgi = trg[i][:]
-            masksy[len(trgi):, i] = 0.0
-            while len(trgi) < output_len:
-                trgi.append(widst['EOS'])
-            y[:, i] = trgi
-
-        D = dy.parameter(self.D_p)
-        b = dy.parameter(self.b_p)
-        A = dy.parameter(self.A_p)
-
-        # Set dropout if necessary
-        if test:
-            self.enc.disable_dropout() 
-            self.dec.disable_dropout() 
-        else:
-            self.enc.set_dropout(self.dr)
-            self.dec.set_dropout(self.dr)
-        es = self.enc.initial_state()
-        ds = self.dec.initial_state()
-        errs = []
-        encoded_states = []
-        # Encode
-        if debug:
-            elapsed = time.time()-start
-            print('Preprocessing took : ', elapsed)
-            start = time.time()
-
-        wembs = [dy.lookup_batch(self.MS_p, iw) for iw in x]
-
-        encoded_states = es.transduce(wembs)
-
+        # Dimensions
+        self.vs, self.vt = source_vocab_size, target_vocab_size
+        self.di, self.dh = input_dim, hidden_dim
+        self.enc_dim = self.dh
         if self.bidir:
-            if test:
-                self.rev_enc.disable_dropout()
-            else:
-                self.rev_enc.set_dropout(self.dr)
+            self.enc_dim += self.dh
+        if self.word_emb:
+            self.enc_dim += self.di
+        self.dec_dim = self.di + self.enc_dim
+        self.out_dim = self.di + self.dh+self.enc_dim
+        # Model
+        self.model = model
+        # RNN parameters
+        self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, self.model)
+        self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, self.model)
+        self.dec = dy.VanillaLSTMBuilder(1, self.dec_dim, self.dh, self.model)
+        # State passing parameters
+        self.Wp_p = self.model.add_parameters((self.dh, self.enc_dim))
+        self.bp_p = self.model.add_parameters((self.dh,), init=dy.ConstInitializer(0))
+        # Attention parameters
+        self.A_p = self.model.add_parameters((self.di, self.enc_dim))
+        self.Wa_p = self.model.add_parameters((self.di, self.dh))
+        self.ba_p = self.model.add_parameters((self.di,), init=dy.ConstInitializer(0))
+        # Embedding parameters
+        self.MS_p = self.model.add_lookup_parameters((self.vs, self.di))
+        self.MT_p = self.model.add_lookup_parameters((self.vt, self.di))
+        # Output parameters
+        self.Wo_p = self.model.add_parameters((self.di, self.out_dim))
+        self.bo_p = self.model.add_parameters((self.di,), init=dy.ConstInitializer(0))
+        # Softmax parameters
+        self.D_p = self.model.add_parameters((self.vt, self.di))
+        self.b_p = self.model.add_parameters((self.vt,), init=dy.ConstInitializer(0))
+
+    def prepare_batch(self, batch, dic):
+        bsize = len(batch)
+
+        batch_len = max(len(s) for s in batch)
+
+        x = np.zeros((batch_len, bsize), dtype=int)
+        masks = np.ones((batch_len, bsize), dtype=float)
+        x[:] = dic['EOS']
+
+        for i in range(bsize):
+            sent = batch[i][:]
+            masks[len(sent):, i] = 0.0
+            while len(sent) < batch_len:
+                sent.append(dic['EOS'])
+            x[:, i] = sent
+        return x, masks
+
+    def encode(self, src, test=False):
+        x, _ = self.prepare_batch(src, widss)
+        es = self.enc.initial_state()
+        encoded_states = []
+        # Embed words
+        wembs = [dy.lookup_batch(self.MS_p, iw) for iw in x]
+        # Encode sentence
+        encoded_states = es.transduce(wembs)
+        # Use bidirectional encoder
+        if self.bidir:
             res = self.rev_enc.initial_state()
             rev_encoded_states = res.transduce(wembs[::-1])[::-1]
-
-        if debug:
-            elapsed = time.time()-start
-            print('Building encoding : ', elapsed)
-            start = time.time()
-        # Attend
+        # Create encoding matrix
         H = dy.concatenate_cols(encoded_states)
         if self.bidir:
             H_bidir = dy.concatenate_cols(rev_encoded_states)
@@ -290,90 +271,76 @@ class Seq2SeqModel(dy.Saveable):
         if self.word_emb:
             H_word_embs = dy.concatenate_cols(wembs)
             H = dy.concatenate([H, H_word_embs])
-        if debug:
-            elapsed = time.time()-start
-            print('Building attention : ', elapsed)
-            start = time.time()
-        # Decode
-        # Initialize decoder
-        start = dy.lookup_batch(self.MT_p, [widst['SOS']] * bsize)
-        start = dy.concatenate([start, dy.zeroes((self.dec_di-self.di,), batch_size=bsize)])
-        ds = ds.add_input(start)
-        # Compute context
-        h = ds.output()
-        context = H * dy.softmax(dy.transpose(A * H) * h)
-        # Loop
+
+        return H
+
+    def attend(self, encodings, h, embs):
+        A, Wa, ba = self.A_p.expr(), self.Wa_p.expr(), self.ba_p.expr()
+        d = dy.affine_transform([ba + embs, Wa, h])
+        scores = dy.transpose(A * encodings) * d
+        weights = dy.softmax(scores)
+        context = encodings * weights
+        return context, weights
+
+    def decode_loss(self, encodings, trg, test=False):
+        y, masksy = self.prepare_batch(trg, widst)
+        slen, bsize = y.shape
+        # Add parameters to the graph
+        Wp, bp = self.Wp_p.expr(), self.bp_p.expr()
+        Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
+        D, b = self.D_p.expr(), self.b_p.expr()
+        # Initialize decoder with last encoding
+        last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
+        init_state = dy.affine_transform([bp, Wp, last_enc])
+        ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,), batch_size=bsize)])
+        # Initialize context
+        context = dy.zeroes((self.enc_dim,), batch_size=bsize)
+        # Start decoding
+        errs = []
         for cw, nw, mask in zip(y, y[1:], masksy[1:]):
             embs = dy.lookup_batch(self.MT_p, cw)
             # Run LSTM
             ds = ds.add_input(dy.concatenate([embs, context]))
-            # Compute next context
             h = ds.output()
-            context = H * dy.softmax(dy.transpose(A * H) * h)
-            # Get distribution over words
-            s = dy.affine_transform([b,D,dy.concatenate([h, context])])
+            # Compute next context
+            context, _ = self.attend(encodings, h, embs)
+            # Compute output with residual connections
+            output = dy.affine_transform([bo, Wo, dy.concatenate([h, context, embs])])
+            if not test:
+                output = dy.dropout(output, self.dr)
+            # Score
+            s = dy.affine_transform([b, D, output])
             masksy_e = dy.inputTensor(mask, batched=True)
+            # Loss
             err = dy.cmult(dy.pickneglogsoftmax_batch(s, nw), masksy_e)
             errs.append(err)
-        if debug:
-            elapsed = time.time()-start
-            print('Building decoding : ', elapsed)
-        err = dy.sum_batches(dy.esum(errs))
+        # Add all losses together
+        err = dy.sum_batches(dy.esum(errs)) / bsize
+        return err
 
+    def calculate_loss(self, src, trg, test=False):
+        dy.renew_cg()
+        encodings = self.encode(src, test=test)
+        err = self.decode_loss(encodings, trg, test=test)
         return err
 
     def translate(self, x, decoding='greedy', T=1.0, beam_size=1):
         dy.renew_cg()
         input_len = len(x)
-        D = dy.parameter(self.D_p)
-        b = dy.parameter(self.b_p)
-        A = dy.parameter(self.A_p)
-        self.enc.disable_dropout()
-        self.dec.disable_dropout()
-        es = self.enc.initial_state()
-        ds = self.dec.initial_state()
-        encoded_states = []
-        # Encode
-        if debug:
-            start = time.time()
-        
-        wembs = [dy.lookup(self.MS_p, iw) for iw in x]
-
-        encoded_states = es.transduce(wembs)
-
-        if self.bidir:
-            self.rev_enc.disable_dropout()
-            res = self.rev_enc.initial_state()
-            rev_encoded_states = res.transduce(wembs[::-1])[::-1]
-
-        if debug:
-            elapsed = time.time()-start
-            print('Building encoding : ', elapsed)
-            start = time.time()
-        # Attend
-        H = dy.concatenate_cols(encoded_states)
-        if self.bidir:
-            H_bidir = dy.concatenate_cols(rev_encoded_states)
-            H = dy.concatenate([H, H_bidir])
-        if self.word_emb:
-            H_word_embs = dy.concatenate_cols(encoded_wembs)
-            H = dy.concatenate([H, H_word_embs])
-        if debug:
-            elapsed = time.time()-start
-            print('Building attention : ', elapsed)
-            start = time.time()
+        encodings = self.encode([x], test=True)
         # Decode
-        cw = widst['SOS']
-        words = []
-        beam = []
-        start = dy.lookup(self.MT_p, widst['SOS'])
-        start = dy.concatenate([start, dy.zeroes((self.dec_di - self.di,))])
-        ds = ds.add_input(start)
-        # Compute context
-        h = ds.output()
-        context = H * dy.softmax(dy.transpose(A * H) * h)
+        # Add parameters to the graph
+        Wp, bp = self.Wp_p.expr(), self.bp_p.expr()
+        Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
+        D, b = self.D_p.expr(), self.b_p.expr()
+        # Initialize decoder with last encoding
+        last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
+        init_state = dy.affine_transform([bp, Wp, last_enc])
+        ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,))])
+        # Initialize context
+        context = dy.zeroes((self.enc_dim,))
         # Initialize beam
-        beam.append((ds, context, [widst['SOS']], 0.0))
+        beam = [(ds, context, [widst['SOS']], 0.0)]
         # Loop
         for i in range(int(min(self.max_len, input_len * 1.5))):
             new_beam = []
@@ -381,14 +348,17 @@ class Seq2SeqModel(dy.Saveable):
                 embs = dy.lookup(self.MT_p, pw[-1])
                 # Run LSTM
                 ds = ds.add_input(dy.concatenate([embs, pc]))
+                h=ds.output()
                 # Compute next context
-                h = ds.output()
-                context = H * dy.softmax(dy.transpose(A * H) * h)
-                # Get distribution over words
-                s = dy.affine_transform([b,D,dy.concatenate([h, context])])
+                context, _ = self.attend(encodings, h, embs)
+                # Compute output with residual connections
+                output = dy.affine_transform([bo, Wo, dy.concatenate([h, context, embs])])
+                # Score
+                s = dy.affine_transform([b, D, output])
+                # Probabilities
                 p = dy.softmax(s * (1 / T)).npvalue().flatten()
                 # Careful of float error
-                p = p/p.sum()
+                p = p / p.sum()
                 kbest = np.argsort(p)
                 for nw in kbest[-beam_size:]:
                     new_beam.append((ds, context, pw + [nw], logprob + np.log(p[nw])))
@@ -404,11 +374,11 @@ class Seq2SeqModel(dy.Saveable):
 
         return beam[-1][2]
 
-    def get_components(self):
-        return self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.b_p
+    def save(self, file):
+        self.model.save(file)
 
-    def restore_components(self, components):
-        self.MS_p, self.MT_p, self.D_p, self.enc, self.dec, self.A_p, self.rev_enc, self.b_p = components
+    def load(self, file):
+        self.model.load(file)
 
 
 if __name__ == '__main__':
@@ -417,8 +387,8 @@ if __name__ == '__main__':
     if verbose:
         print('Reading corpora')
     # Read vocabs
-    widss, ids2ws = read_dic(args.train_src,max_size=args.src_vocab_size)
-    widst, ids2wt = read_dic(args.train_dst,max_size=args.trg_vocab_size)
+    widss, ids2ws = read_dic(args.train_src, max_size=args.src_vocab_size)
+    widst, ids2wt = read_dic(args.train_dst, max_size=args.trg_vocab_size)
     # Read training
     trainings_data = read_corpus(args.train_src, widss)
     trainingt_data = read_corpus(args.train_dst, widst)
@@ -437,19 +407,19 @@ if __name__ == '__main__':
         sys.stdout.flush()
     m = dy.Model()
     model_file = args.model
+    s2s = Seq2SeqModel(m,
+                       args.emb_dim,
+                       args.hidden_dim,
+                       len(widss),
+                       len(widst),
+                       bidir=args.bidir,
+                       word_emb=args.word_emb,
+                       dropout=args.dropout_rate,
+                       max_len=args.max_len)
+
     if model_file is not None:
-        [s2s] = m.load(model_file)
-    else:
-        s2s = Seq2SeqModel(m,
-                           args.emb_dim,
-                           args.hidden_dim,
-                           len(widss),
-                           len(widst),
-                           bidir=args.bidir,
-                           word_emb=args.word_emb,
-                           dropout=args.dropout_rate,
-                           max_len=args.max_len)
-        model_file = args.exp_name+'_model.txt'
+        s2s.load(model_file)
+    model_file = args.exp_name+'_model.txt'
 
     trainer = dy.AdamTrainer(m, args.learning_rate, edecay=args.learning_rate_decay)
     # trainer.set_clip_threshold(-1)
@@ -481,7 +451,7 @@ if __name__ == '__main__':
                 loss = s2s.calculate_loss(x, y)
                 loss.backward()
                 trainer.update()
-                train_loss += loss.scalar_value()
+                train_loss += loss.scalar_value() * args.batch_size
                 if (i+1) % args.check_train_error_every == 0:
                     logloss = train_loss / processed
                     ppl = np.exp(logloss)
@@ -500,7 +470,7 @@ if __name__ == '__main__':
                     for x, y in devbatchloader:
                         dev_processed += sum(map(len, y))
                         loss = s2s.calculate_loss(x, y, test=True)
-                        dev_loss += loss.scalar_value()
+                        dev_loss += loss.scalar_value() * args.dev_batch_size
                     dev_logloss = dev_loss/dev_processed
                     dev_ppl = np.exp(dev_logloss)
                     dev_elapsed = time.time()-dev_start
@@ -509,7 +479,7 @@ if __name__ == '__main__':
                     if dev_ppl < best_dev_loss:
                         best_dev_loss = dev_ppl
                         print('Best dev error up to date, saving model to', model_file)
-                        m.save(model_file, [s2s])
+                        s2s.save(model_file)
                     sys.stdout.flush()
 
                 if (i+1) % args.test_every == 0:
