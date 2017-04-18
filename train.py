@@ -217,7 +217,7 @@ class Seq2SeqModel(dy.Saveable):
 
         self.max_len = max_len
 
-    def calculate_loss(self, src, trg):
+    def calculate_loss(self, src, trg, test=False):
         dy.renew_cg()
 
         bsize = len(src)
@@ -250,8 +250,12 @@ class Seq2SeqModel(dy.Saveable):
         A = dy.parameter(self.A_p)
 
         # Set dropout if necessary
-        self.enc.set_dropout(self.dr)
-        self.dec.set_dropout(self.dr)
+        if test:
+            self.enc.disable_dropout() 
+            self.dec.disable_dropout() 
+        else:
+            self.enc.set_dropout(self.dr)
+            self.dec.set_dropout(self.dr)
         es = self.enc.initial_state()
         ds = self.dec.initial_state()
         errs = []
@@ -267,7 +271,10 @@ class Seq2SeqModel(dy.Saveable):
         encoded_states = es.transduce(wembs)
 
         if self.bidir:
-            self.rev_enc.set_dropout(self.dr)
+            if test:
+                self.rev_enc.disable_dropout()
+            else:
+                self.rev_enc.set_dropout(self.dr)
             res = self.rev_enc.initial_state()
             rev_encoded_states = res.transduce(wembs[::-1])[::-1]
 
@@ -492,7 +499,7 @@ if __name__ == '__main__':
                     dev_start = time.time()
                     for x, y in devbatchloader:
                         dev_processed += sum(map(len, y))
-                        loss = s2s.calculate_loss(x, y)
+                        loss = s2s.calculate_loss(x, y, test=True)
                         dev_loss += loss.scalar_value()
                     dev_logloss = dev_loss/dev_processed
                     dev_ppl = np.exp(dev_logloss)
