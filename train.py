@@ -1,4 +1,6 @@
-# rnn LM
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 from __future__ import print_function, division
 import numpy as np
@@ -7,7 +9,6 @@ from collections import defaultdict
 import dynet as dy
 import time
 import pickle
-import sys
 from nltk.translate.bleu_score import corpus_bleu
 
 CHECK_TRAIN_ERROR_EVERY = 10
@@ -499,14 +500,26 @@ if __name__ == '__main__':
                     test_start = time.time()
                     translations=[]
                     references=[]
+                    empty=False
                     for x,y in zip(tests_data,testt_data):
                         y_hat = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
                         reference = [ids2wt[w] for w in y[1:-1]]
                         translation = [ids2wt[w] for w in y_hat[1:-1]]
+                        print('##### REFERENCE #####')
+			print(' '.join(reference))
+                        print('#### TRANSLATION ####')
+			print(' '.join(translation))
+                        if len(translation)<1:
+                            empty=True
+                            break
                         references.append([reference])
                         translations.append(translation)
                     test_elapsed = time.time()-test_start
-                    print('Finished running on test set', test_elapsed, 'elapsed, BLEU score :',corpus_bleu(references, translations)*100)
+                    if empty:
+                        bleu=0
+                    else:
+                        bleu = corpus_bleu(references, translations)*100
+                    print('Finished running on test set', test_elapsed, 'elapsed, BLEU score :',bleu)
                     sys.stdout.flush()
                     start = time.time()
                 i = i+1
