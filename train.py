@@ -503,7 +503,7 @@ if __name__ == '__main__':
                         y_hat = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
                         reference = [ids2wt[w] for w in y[1:-1]]
                         translation = [ids2wt[w] for w in y_hat[1:-1]]
-                        references.append(reference)
+                        references.append([reference])
                         translations.append(translation)
                     test_elapsed = time.time()-test_start
                     print('Finished running on test set', test_elapsed, 'elapsed, BLEU score :',corpus_bleu(references, translations)*100)
