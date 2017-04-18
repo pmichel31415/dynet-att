@@ -8,6 +8,7 @@ import dynet as dy
 import time
 import pickle
 import sys
+from nltk.translate.bleu_score import corpus_bleu
 
 CHECK_TRAIN_ERROR_EVERY = 10
 CHECK_VALID_ERROR_EVERY = 1000
@@ -17,17 +18,19 @@ parser.add_argument("--dynet-seed", default=0, type=int)
 parser.add_argument("--dynet-mem", default=512, type=int)
 parser.add_argument("--dynet-gpus", default=0, type=int)
 parser.add_argument("--train_src", '-ts',
-                    default='en-de/train.en-de.en', type=str)
-parser.add_argument("--train_dst", '-td',
                     default='en-de/train.en-de.de', type=str)
+parser.add_argument("--train_dst", '-td',
+                    default='en-de/train.en-de.en', type=str)
 parser.add_argument("--valid_src", '-vs',
-                    default='en-de/valid.en-de.en', type=str)
-parser.add_argument("--valid_dst", '-vd',
                     default='en-de/valid.en-de.de', type=str)
+parser.add_argument("--valid_dst", '-vd',
+                    default='en-de/valid.en-de.en', type=str)
 parser.add_argument("--test_src", '-tes',
+                    default='en-de/test.en-de.de', type=str)
+parser.add_argument("--test_dst", '-ted',
                     default='en-de/test.en-de.en', type=str)
 parser.add_argument("--test_out", '-teo',
-                    default='results/test.en-de.de', type=str)
+                    default='results/out.en-de.en', type=str)
 parser.add_argument("--model", '-m', type=str, help='Model to load from')
 parser.add_argument('--num_epochs', '-ne',
                     type=int, help='Number of epochs', default=1)
@@ -41,6 +44,8 @@ parser.add_argument('--dev_batch_size', '-dbs',
                     type=int, help='minibatch size for the validation set', default=10)
 parser.add_argument('--emb_dim', '-de',
                     type=int, help='embedding size', default=256)
+parser.add_argument('--att_dim', '-da',
+                    type=int, help='attention size', default=256)
 parser.add_argument('--hidden_dim', '-dh',
                     type=int, help='hidden size', default=256)
 parser.add_argument('--dropout_rate', '-dr',
@@ -107,7 +112,7 @@ def read_dic(file, max_size=20000, min_freq=1):
             for word in sent:
                 freqs[word] += 1
 
-    sorted_words = sorted(freqs.iteritems(), key=lambda x: x[1], reverse=True)
+    sorted_words = sorted(freqs.items(), key=lambda x: x[1], reverse=True)
     for i in range(max_size):
         word, freq = sorted_words[i]
         if freq <= min_freq:
@@ -155,7 +160,7 @@ class BatchLoader(object):
         for src, trg in zip(datas, datat):
             buckets[len(src)].append((src, trg))
 
-        for src_len, bucket in buckets.iteritems():
+        for src_len, bucket in buckets.items():
             np.random.shuffle(bucket)
             num_batches = int(np.ceil(len(bucket) * 1.0 / self.bs))
             for i in range(num_batches):
@@ -190,6 +195,7 @@ class Seq2SeqModel(dy.Saveable):
                  model,
                  input_dim,
                  hidden_dim,
+                 att_dim,
                  source_vocab_size,
                  target_vocab_size,
                  bidir=False,
@@ -203,7 +209,7 @@ class Seq2SeqModel(dy.Saveable):
         self.max_len = max_len
         # Dimensions
         self.vs, self.vt = source_vocab_size, target_vocab_size
-        self.di, self.dh = input_dim, hidden_dim
+        self.di, self.dh, self.da = input_dim, hidden_dim, att_dim
         self.enc_dim = self.dh
         if self.bidir:
             self.enc_dim += self.dh
@@ -221,9 +227,9 @@ class Seq2SeqModel(dy.Saveable):
         self.Wp_p = self.model.add_parameters((self.dh, self.enc_dim))
         self.bp_p = self.model.add_parameters((self.dh,), init=dy.ConstInitializer(0))
         # Attention parameters
-        self.A_p = self.model.add_parameters((self.di, self.enc_dim))
-        self.Wa_p = self.model.add_parameters((self.di, self.dh))
-        self.ba_p = self.model.add_parameters((self.di,), init=dy.ConstInitializer(0))
+        self.Va_p = self.model.add_parameters((self.da))
+        self.Wa_p = self.model.add_parameters((self.da, self.enc_dim))
+        self.Wha_p = self.model.add_parameters((self.da,self.dh))
         # Embedding parameters
         self.MS_p = self.model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = self.model.add_lookup_parameters((self.vt, self.di))
@@ -275,9 +281,9 @@ class Seq2SeqModel(dy.Saveable):
         return H
 
     def attend(self, encodings, h, embs):
-        A, Wa, ba = self.A_p.expr(), self.Wa_p.expr(), self.ba_p.expr()
-        d = dy.affine_transform([ba + embs, Wa, h])
-        scores = dy.transpose(A * encodings) * d
+        Va, Wa, Wha = self.Va_p.expr(), self.Wa_p.expr(), self.Wha_p.expr()
+        d = dy.tanh(dy.colwise_add(Wa * encodings,Wha * h))
+        scores = dy.transpose(d) * Va
         weights = dy.softmax(scores)
         context = encodings * weights
         return context, weights
@@ -315,7 +321,7 @@ class Seq2SeqModel(dy.Saveable):
             err = dy.cmult(dy.pickneglogsoftmax_batch(s, nw), masksy_e)
             errs.append(err)
         # Add all losses together
-        err = dy.sum_batches(dy.esum(errs)) / bsize
+        err = dy.sum_batches(dy.esum(errs)) / float(bsize)
         return err
 
     def calculate_loss(self, src, trg, test=False):
@@ -400,6 +406,7 @@ if __name__ == '__main__':
     validt_data = read_corpus(args.valid_dst, widst)
     # Read test
     tests_data = read_corpus(args.test_src, widss)
+    testt_data = read_corpus(args.test_dst, widst)
 
     # ===================================================================
     if verbose:
@@ -410,6 +417,7 @@ if __name__ == '__main__':
     s2s = Seq2SeqModel(m,
                        args.emb_dim,
                        args.hidden_dim,
+                       args.att_dim,
                        len(widss),
                        len(widst),
                        bidir=args.bidir,
@@ -440,18 +448,19 @@ if __name__ == '__main__':
         if verbose:
             print('starting training')
             sys.stdout.flush()
+        start = time.time()
         train_loss = 0
         processed = 0
         best_dev_loss = np.inf
         i = 0
         for epoch in range(args.num_epochs):
-            start = time.time()
             for x, y in trainbatchloader:
                 processed += sum(map(len, y))
+                bsize = len(y)
                 loss = s2s.calculate_loss(x, y)
                 loss.backward()
                 trainer.update()
-                train_loss += loss.scalar_value() * args.batch_size
+                train_loss += loss.scalar_value() * bsize
                 if (i+1) % args.check_train_error_every == 0:
                     logloss = train_loss / processed
                     ppl = np.exp(logloss)
@@ -469,8 +478,9 @@ if __name__ == '__main__':
                     dev_start = time.time()
                     for x, y in devbatchloader:
                         dev_processed += sum(map(len, y))
+                        bsize = len(y)
                         loss = s2s.calculate_loss(x, y, test=True)
-                        dev_loss += loss.scalar_value() * args.dev_batch_size
+                        dev_loss += loss.scalar_value() * bsize
                     dev_logloss = dev_loss/dev_processed
                     dev_ppl = np.exp(dev_logloss)
                     dev_elapsed = time.time()-dev_start
@@ -481,19 +491,24 @@ if __name__ == '__main__':
                         print('Best dev error up to date, saving model to', model_file)
                         s2s.save(model_file)
                     sys.stdout.flush()
+                    start = time.time()
 
                 if (i+1) % args.test_every == 0:
                     print('Start running on test set, buckle up!')
                     sys.stdout.flush()
                     test_start = time.time()
-                    with open(args.test_out, 'w+') as of:
-                        for x in tests_data:
-                            y = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
-                            translation = ' '.join([ids2wt[w] for w in y])
-                            of.write(translation+'\n')
+                    translations=[]
+                    references=[]
+                    for x,y in zip(tests_data,testt_data):
+                        y_hat = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
+                        reference = [ids2wt[w] for w in y[1:-1]]
+                        translation = [ids2wt[w] for w in y_hat[1:-1]]
+                        references.append(reference)
+                        translations.append(translation)
                     test_elapsed = time.time()-test_start
-                    print('Finished running on test set', test_elapsed, 'elapsed.')
+                    print('Finished running on test set', test_elapsed, 'elapsed, BLEU score :',corpus_bleu(references, translations)*100)
                     sys.stdout.flush()
+                    start = time.time()
                 i = i+1
             trainer.update_epoch()
     # ===================================================================
