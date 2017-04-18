@@ -202,11 +202,11 @@ class Seq2SeqModel(dy.Saveable):
         self.dr = dropout
 
         # Declare parameters
-        self.enc = dy.GRUBuilder(1, self.di, self.dh, model)
-        self.rev_enc = dy.GRUBuilder(1, self.di, self.dh, model)
+        self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
+        self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, model)
         self.dec_di = self.di + self.dh + \
             (self.dh if self.bidir else 0) + (self.di if self.word_emb else 0)
-        self.dec = dy.GRUBuilder(1, self.dec_di, self.dh, model)
+        self.dec = dy.VanillaLSTMBuilder(1, self.dec_di, self.dh, model)
         self.A_p = model.add_parameters((self.dh, self.dec_di - self.di))
         self.MS_p = model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = model.add_lookup_parameters((self.vt, self.di))
@@ -335,7 +335,7 @@ class Seq2SeqModel(dy.Saveable):
         encoded_states = es.transduce(wembs)
 
         if self.bidir:
-            self.rev_enc.set_dropout(self.dr)
+            self.rev_enc.disable_dropout()
             res = self.rev_enc.initial_state()
             rev_encoded_states = res.transduce(wembs[::-1])[::-1]
 
