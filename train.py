@@ -499,27 +499,15 @@ if __name__ == '__main__':
                     print('Start running on test set, buckle up!')
                     sys.stdout.flush()
                     test_start = time.time()
-                    translations=[]
-                    references=[]
-                    empty=False
+                    f=open(args.test_out,'w+')
                     for x,y in zip(tests_data,testt_data):
                         y_hat = s2s.translate(x, decoding='beam_search', beam_size=args.beam_size)
                         reference = [ids2wt[w] for w in y[1:-1]]
                         translation = [ids2wt[w] for w in y_hat[1:-1]]
-                        print('###################')
-			print('REFERENCE :  ',' '.join(reference))
-			print('TRANSLATION :',' '.join(translation))
-                        if len(translation)<1:
-                            empty=True
-                            break
-                        references.append([reference])
-                        translations.append(translation)
+			print(' '.join(translation),file=f)
+                    f.close()
                     test_elapsed = time.time()-test_start
-                    if empty:
-                        bleu=0
-                    else:
-                        bleu = corpus_bleu(references, translations)*100
-                    print('Finished running on test set', test_elapsed, 'elapsed, BLEU score :',bleu)
+                    print('Finished running on test set', test_elapsed, 'elapsed.')
                     sys.stdout.flush()
                     start = time.time()
                 i = i+1
