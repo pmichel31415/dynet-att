@@ -37,3 +37,7 @@ The current model uses LSTMs (`dynet.VanillaLSTM`) for the encoder(s) and decode
 ## Performance
 
 With the configuration stored in `config/best_config.yaml`, a BLEU score of 25.81 is attained on the test set
+
+## Known issue
+
+As of now you can't configure the global dynet parameters with the yaml config, you need to specify them manually in the command line

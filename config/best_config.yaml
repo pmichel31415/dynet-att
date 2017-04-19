@@ -10,7 +10,7 @@ emb_dim : 512
 hidden_dim : 512
 max_len : 80
 dropout_rate : 0.5
-gradient_clipping: 1.0
+gradient_clipping: 5.0
 trainer: adam
 train:
   train : True

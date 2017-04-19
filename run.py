@@ -77,6 +77,8 @@ if __name__ == '__main__':
             print('Trainer name invalid or not provided, using SGD', file=sys.stderr)
             trainer = dy.SimpleSGDTrainer(
                 s2s.model, e0=opt.learning_rate, edecay=opt.learning_rate_decay)
+        if opt.verbose:
+            print('Using '+opt.trainer+' optimizer')
         trainer.set_clip_threshold(opt.gradient_clip)
     # Print configuration ===============================================
     if opt.verbose:
