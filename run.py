@@ -11,6 +11,7 @@ import time
 import data
 import options
 import seq2seq
+import evaluation
 
 if __name__ == '__main__':
     # Retrieve options ==================================================
@@ -37,9 +38,9 @@ if __name__ == '__main__':
         # Read validation
         valids_data = data.read_corpus(opt.valid_src, widss)
         validt_data = data.read_corpus(opt.valid_dst, widst)
-    # Read test
-    tests_data = data.read_corpus(opt.test_src, widss)
-    testt_data = data.read_corpus(opt.test_dst, widst)
+    if opt.test:
+        # Read test
+        tests_data = data.read_corpus(opt.test_src, widss)
 
     # Create model ======================================================
     if opt.verbose:
@@ -96,17 +97,20 @@ if __name__ == '__main__':
         start = time.time()
         train_loss = 0
         processed = 0
-        best_dev_loss = np.inf
+        best_bleu = 0
         i = 0
         for epoch in range(opt.num_epochs):
             for x, y in trainbatchloader:
                 processed += sum(map(len, y))
                 bsize = len(y)
+                # Compute loss
                 loss = s2s.calculate_loss(x, y)
+                # Backward pass and parameter update
                 loss.backward()
                 trainer.update()
                 train_loss += loss.scalar_value() * bsize
                 if (i+1) % opt.check_train_error_every == 0:
+                    # Check average training error from time to time
                     logloss = train_loss / processed
                     ppl = np.exp(logloss)
                     elapsed = time.time()-start
@@ -118,6 +122,7 @@ if __name__ == '__main__':
                     processed = 0
                     sys.stdout.flush()
                 if (i+1) % opt.check_valid_error_every == 0:
+                    # Check generalization error on the validation set from time to time
                     dev_loss = 0
                     dev_processed = 0
                     dev_start = time.time()
@@ -131,26 +136,28 @@ if __name__ == '__main__':
                     dev_elapsed = time.time()-dev_start
                     print("[epoch %d] Dev loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
                           (epoch, dev_logloss, dev_ppl, dev_elapsed, dev_processed))
-                    if dev_ppl < best_dev_loss:
-                        best_dev_loss = dev_ppl
-                        print('Best dev error up to date, saving model to', s2s.model_file)
-                        s2s.save()
                     sys.stdout.flush()
                     start = time.time()
 
-                if (i+1) % opt.test_every == 0:
-                    print('Start running on test set, buckle up!')
+                if (i+1) % opt.valid_bleu_every == 0:
+                    # Check BLEU score on the validation set from time to time
+                    print('Start translating validation set, buckle up!')
                     sys.stdout.flush()
-                    test_start = time.time()
-                    f = open(opt.test_out, 'w+')
-                    for x, y in zip(tests_data, testt_data):
-                        y_hat = s2s.translate(x, decoding='beam_search', beam_size=opt.beam_size)
-                        reference = [ids2wt[w] for w in y[1:-1]]
-                        translation = [ids2wt[w] for w in y_hat[1:-1]]
-                        print('t=', ' '.join(translation), file=f)
-                    f.close()
-                    test_elapsed = time.time()-test_start
-                    print('Finished running on test set', test_elapsed, 'elapsed.')
+                    bleu_start = time.time()
+                    with open(opt.valid_out, 'w+') as f:
+                        for x in valids_data:
+                            y_hat = s2s.translate(x, beam_size=opt.beam_size)
+                            translation = [ids2wt[w] for w in y_hat[1:-1]]
+                            print(' '.join(translation), file=f)
+                    bleu, details = evaluation.bleu_score(opt.valid_dst, opt.valid_out)
+                    bleu_elapsed = time.time()-bleu_start
+                    print('Finished translating validation set', bleu_elapsed, 'elapsed.')
+                    print(details)
+                    # Early stopping : save the latest best model
+                    if bleu > best_bleu:
+                        best_bleu = bleu
+                        print('Best BLEU score up to date, saving model to', s2s.model_file)
+                        s2s.save()
                     sys.stdout.flush()
                     start = time.time()
                 i = i+1
@@ -162,9 +169,11 @@ if __name__ == '__main__':
         test_start = time.time()
         with open(opt.test_out, 'w+') as of:
             for x in tests_data:
-                y = s2s.translate(x, decoding='beam_search', beam_size=opt.beam_size)
+                y = s2s.translate(x, beam_size=opt.beam_size)
                 translation = ' '.join([ids2wt[w] for w in y])
                 of.write(translation+'\n')
+        _, details = evaluation.bleu_score(opt.test_dst, opt.test_out)
         test_elapsed = time.time()-test_start
         print('Finished running on test set', test_elapsed, 'elapsed.')
+        print(details)
         sys.stdout.flush()

@@ -33,7 +33,9 @@ parser.add_argument("--dic_src", '-dis',
 parser.add_argument("--dic_dst", '-did',
                     default=None, type=str)
 parser.add_argument("--test_out", '-teo',
-                    default='results/out.en-de.en', type=str)
+                    default='results/test.out.en-de.en', type=str)
+parser.add_argument("--valid_out", '-vo',
+                    default='results/valid.out.en-de.en', type=str)
 parser.add_argument("--model", '-m', type=str, help='Model to load from')
 parser.add_argument("--trainer", '-tr', type=str, help='Optimizer', default='sgd')
 parser.add_argument('--num_epochs', '-ne',
@@ -64,8 +66,8 @@ parser.add_argument('--check_train_error_every', '-ct',
                     type=int, help='Check train error every', default=100)
 parser.add_argument('--check_valid_error_every', '-cv',
                     type=int, help='Check valid error every', default=1000)
-parser.add_argument('--test_every', '-te',
-                    type=int, help='Run on test set every', default=500)
+parser.add_argument('--valid_bleu_every', '-vbe',
+                    type=int, help='Compute BLEU on validation set every', default=500)
 parser.add_argument('--max_len', '-ml', type=int,
                     help='Maximum length of generated sentences', default=60)
 parser.add_argument('--beam_size', '-bm', type=int,
@@ -90,6 +92,11 @@ parser.add_argument("--test",
 
 
 def get_options():
+    """Get options from commanf line arguments and optionally config file
+    
+    Returns:
+        argparse.Namespace: arguments
+    """
     opt = parser.parse_args()
     if opt.config_file:
         with open(opt.config_file, 'r') as f:
@@ -110,6 +117,14 @@ def get_options():
 
 
 def print_config(opt, **kwargs):
+    """Print the current configuration
+    
+    Prints command line arguments plus any kwargs
+    
+    Arguments:
+        opt (argparse.Namespace): Command line arguments
+        **kwargs: Any other key=value pair
+    """
     print('======= CONFIG =======')
     for k, v in vars(opt).items():
         print(k, ':', v)

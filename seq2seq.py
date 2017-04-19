@@ -8,8 +8,14 @@ import numpy as np
 import dynet as dy
 
 
-class Seq2SeqModel(dy.Saveable):
-
+class Seq2SeqModel(object):
+    """A neural sequence to sequence model with attention
+    
+    Uses LSTM encoder and decoder, as well as tanh based attention
+    
+    Extends:
+        object
+    """
     def __init__(self,
                  input_dim,
                  hidden_dim,
@@ -21,6 +27,22 @@ class Seq2SeqModel(dy.Saveable):
                  word_emb=False,
                  dropout=0.0,
                  max_len=60):
+        """Constructor
+        
+        Arguments:
+            input_dim (int): Embedding dimension
+            hidden_dim (int): Dimension of the recurrent layers
+            att_dim (int): Dimension of the hidden layer in the attention MLP
+            src_dic (dict): Dictionary of the source language mapping words to indices
+            trg_dic (dict): Dictionary of the target language mapping words to indices
+        
+        Keyword Arguments:
+            model_file (str): File where the model should be saved (default: (None))
+            bidir (bool): Whether to use a bidirectionnal encoder (default: (False))
+            word_emb (bool): Whether to use residual connections between source embeddings and the attention layer (default: (False))
+            dropout (number): dropout rate for the output layer (before softmax) (default: (0.0))
+            max_len (number): Maximum length allowed when generating translations (default: (60))
+        """
         # Store config
         self.bidir = bidir
         self.word_emb = word_emb
@@ -63,6 +85,22 @@ class Seq2SeqModel(dy.Saveable):
         self.b_p = self.model.add_parameters((self.vt,), init=dy.ConstInitializer(0))
 
     def prepare_batch(self, batch, eos):
+        """Prepare batch of sentences for sequential processing
+        
+        Basically transposes the batch, pads sentences of different lengths with EOS symbols and builds a mask for the loss function (so that the loss is masked on the padding words).
+
+        Example (with strings instead of int for clarity):
+
+        [["I","like","chocolate"],["Me","too"]] 
+        -> [["I","Me"],["like","too"],["chocolate","EOS"]], [[1,1],[1,1],[1,0]]
+        
+        Arguments:
+            batch (list): List of sentences
+            eos (type): EOS index
+        
+        Returns:
+            tuple -- (prepared_batch, masks) both of shape (sentence_length, batch_size)
+        """
         bsize = len(batch)
 
         batch_len = max(len(s) for s in batch)
@@ -80,9 +118,21 @@ class Seq2SeqModel(dy.Saveable):
         return x, masks
 
     def encode(self, src, test=False):
+        """Encode a batch of sentences
+        
+        Arguments:
+            src (list): List of sentences. It is assumed that all source sentences have the same length
+        
+        Keyword Arguments:
+            test (bool) -- Switch used for things like dropout where the behaviour is different at test time (default: (False)
+        
+        Returns:
+            dynet.Expression -- Expression of the encodings
+        """
+        # Prepare batch
         x, _ = self.prepare_batch(src, self.src_eos)
+        # Add encoder to computation graph
         es = self.enc.initial_state()
-        encoded_states = []
         # Embed words
         wembs = [dy.lookup_batch(self.MS_p, iw) for iw in x]
         # Encode sentence
@@ -102,7 +152,25 @@ class Seq2SeqModel(dy.Saveable):
 
         return H
 
-    def attend(self, encodings, h, embs):
+    def attend(self, encodings, h):
+        """Compute attention score
+        
+        Given :math:`z_i` the encoder's output at time :math:`i`, :math:`h_{j-1}` the decoder's output at time :math:`j-1`, the attention score is computed as :
+
+        .. math::
+            
+            \begin{split}
+                s_{ij}&=V_a^T\tanh(W_az_i + W_{ha}h_j + b_a)\\
+                \alpha_{ij}&=\frac{s_{ij}}{\sum_{i'}s_{i'j}}\\
+            \end{split}
+        
+        Arguments:
+            encodings (dynet.Expression): Source sentence encodings obtained with self.encode
+            h (dynet.Expression): Decoder output at the previous timestep
+        
+        Returns:
+            tuple: Two dynet Expressions, the context and the attention weights
+        """
         Va, Wa, Wha = self.Va_p.expr(), self.Wa_p.expr(), self.Wha_p.expr()
         d = dy.tanh(dy.colwise_add(Wa * encodings, Wha * h))
         scores = dy.transpose(d) * Va
@@ -111,6 +179,18 @@ class Seq2SeqModel(dy.Saveable):
         return context, weights
 
     def decode_loss(self, encodings, trg, test=False):
+        """Compute the negative conditional log likelihood of the target sentence given the encoding of the source sentence
+        
+        Arguments:
+            encodings (dynet.Expression): Source sentence encodings obtained with self.encode
+            trg (list): List of target sentences
+        
+        Keyword Arguments:
+            test (bool): Switch used for things like dropout where the behaviour is different at test time (default: (False)
+        
+        Returns:
+            dynet.Expression: Expression of the loss averaged on the minibatch
+        """
         y, masksy = self.prepare_batch(trg, self.trg_eos)
         slen, bsize = y.shape
         # Add parameters to the graph
@@ -131,7 +211,7 @@ class Seq2SeqModel(dy.Saveable):
             ds = ds.add_input(dy.concatenate([embs, context]))
             h = ds.output()
             # Compute next context
-            context, _ = self.attend(encodings, h, embs)
+            context, _ = self.attend(encodings, h)
             # Compute output with residual connections
             output = dy.affine_transform([bo, Wo, dy.concatenate([h, context, embs])])
             if not test:
@@ -147,12 +227,39 @@ class Seq2SeqModel(dy.Saveable):
         return err
 
     def calculate_loss(self, src, trg, test=False):
+        """Compute the conditional log likelihood of the target sentences given the source sentences
+        
+        Combines encoding and decoding
+        
+        Arguments:
+            src (list): List of sentences. It is assumed that all source sentences have the same length
+            trg (list): List of target sentences
+        
+        Keyword Arguments:
+            test (bool): Switch used for things like dropout where the behaviour is different at test time (default: (False)
+        
+        Returns:
+            dynet.Expression: Expression of the loss averaged on the minibatch
+        """
         dy.renew_cg()
         encodings = self.encode(src, test=test)
         err = self.decode_loss(encodings, trg, test=test)
         return err
 
-    def translate(self, x, decoding='greedy', T=1.0, beam_size=1):
+    def translate(self, x, beam_size=1):
+        """Translate a source sentence
+        
+        Translate a single source sentence by decoding using beam search
+
+        Arguments:
+            x (list): Source sentence (list of indices)
+        
+        Keyword Arguments:
+            beam_size (int): Size of the beam for beam search. A value of 1 means greedy decoding (default: (1))
+        
+        Returns:
+            list: generated translation (list of indices)
+        """
         dy.renew_cg()
         input_len = len(x)
         encodings = self.encode([x], test=True)
@@ -178,13 +285,13 @@ class Seq2SeqModel(dy.Saveable):
                 ds = ds.add_input(dy.concatenate([embs, pc]))
                 h = ds.output()
                 # Compute next context
-                context, _ = self.attend(encodings, h, embs)
+                context, _ = self.attend(encodings, h)
                 # Compute output with residual connections
                 output = dy.affine_transform([bo, Wo, dy.concatenate([h, context, embs])])
                 # Score
                 s = dy.affine_transform([b, D, output])
                 # Probabilities
-                p = dy.softmax(s * (1 / T)).npvalue().flatten()
+                p = dy.softmax(s).npvalue().flatten()
                 # Careful of float error
                 p = p / p.sum()
                 kbest = np.argsort(p)
@@ -199,7 +306,15 @@ class Seq2SeqModel(dy.Saveable):
         return beam[-1][2]
 
     def save(self):
+        """Save model
+        
+        Saves the model holding the parameters to self.model_file
+        """
         self.model.save(self.model_file)
 
     def load(self):
+        """Load model
+        
+        Loads the model holding the parameters from self.model_file
+        """
         self.model.load(self.model_file)

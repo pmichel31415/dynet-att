@@ -18,15 +18,13 @@ train:
   train_src : en-de/train.en-de.low.filt.de
   valid_src : en-de/valid.en-de.low.de
   valid_dst : en-de/valid.en-de.low.en
-  test_src : en-de/valid.en-de.low.de
-  test_dst : en-de/valid.en-de.low.en
-  test_out : results/out.en-de.en
+  valid_out : results/out.en-de.en
   num_epochs : 1
   batch_size : 5
   dev_batch_size : 5
   check_train_error_every : 1
   check_valid_error_every : 5
-  test_every : 5
+  valid_bleu_every : 5
   learning_rate : 0.01
   learning_rate_decay : 0.0
   beam_size : 1

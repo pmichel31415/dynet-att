@@ -10,11 +10,27 @@ from collections import defaultdict
 
 
 def save_dic(file, dic):
+    """Save dictionary to file
+    
+    Converts defaultdict to dict to prevent pickling error
+    
+    Arguments:
+        file (str): File path
+        dic (defaultdict): Dictionary to save
+    """
     with open(file, 'w+') as f:
         pickle.dump(dict(dic), f)
 
 
 def load_dic(file):
+    """Load dictionary from file
+    
+    Arguments:
+        file (str): File path
+    
+    Returns:
+        defaultdict: Loaded dictionary
+    """
     with open(file, 'r') as f:
         saved_dic = pickle.load(f)
     dic = defaultdict(lambda: 0)
@@ -24,6 +40,16 @@ def load_dic(file):
 
 
 def reverse_dic(dic):
+    """Get the inverse mapping from an injective dictionary
+    
+    dic[key] = value <==> reverse_dic(dic)[value] = key
+    
+    Args:
+        dic (defaultdict): Dictionary to reverse
+    
+    Returns:
+        defaultdict: Reversed dictionary
+    """
     rev_dic = dict()
     for k, v in dic.items():
         rev_dic[v] = k
@@ -31,6 +57,19 @@ def reverse_dic(dic):
 
 
 def read_dic(file, max_size=20000, min_freq=1):
+    """Read dictionary from corpus
+    
+    Args:
+        file (str): [description]
+
+    Keyword Arguments:
+        max_size (int): Only the top max_size words (by frequency) are stored, the rest is UNKed (default: {20000})
+        min_freq (int): Disregard words with frequency <= min_freq (default: {1})
+    
+    Returns:
+        Dictionary
+        defaultdict
+    """
     dic = defaultdict(lambda: 0)
     freqs = defaultdict(lambda: 0)
     dic['UNK'], dic['SOS'], dic['EOS'] = 0, 1, 2
@@ -51,8 +90,18 @@ def read_dic(file, max_size=20000, min_freq=1):
 
 
 def read_corpus(file, dic):
-    # for each line in the file, split the words and turn them into IDs like
-    # this:
+    """Read corpus in list of sentences
+    
+    Each sentence is a list of integers (determined by dic)
+    
+    Args:
+        file (str): Corpus file path
+        dic (defaultdict): Dictionary for the str -> int conversion
+    
+    Returns:
+        Corpus
+        list
+    """
     sentences = []
     with open(file, 'r') as f:
         for l in f:
@@ -68,8 +117,19 @@ def read_corpus(file, dic):
 
 
 class BatchLoader(object):
+    """Iterator used to load batches
+    
+    Batches are predetermined so that each batch has only source sentence of the same length (easier for minibatching)
+    """
 
     def __init__(self, datas, datat, bsize):
+        """Constructor
+        
+        Args:
+            datas (list): Source corpus
+            datat (list): Target corpus
+            bsize (int): Batch size
+        """
         self.batches = []
 
         self.bs = bsize
@@ -91,11 +151,23 @@ class BatchLoader(object):
         self.reseed()
 
     def reseed(self):
+        """Reshuffle the batches
+
+        """
         print('Reseeding the dataset')
         self.i = 0
         np.random.shuffle(self.batches)
 
     def next(self):
+        """Get next batch
+        
+        Returns:
+            (source batch, target batch)
+            tuple
+        
+        Raises:
+            StopIteration: When all batches have been seen. Also resshuffles the batches
+        """
         if self.i >= self.n - 1:
             self.reseed()
             raise StopIteration()
@@ -103,6 +175,8 @@ class BatchLoader(object):
         return self.batches[self.i]
 
     def __next__(self):
+        """Same as self.next
+        """
         return self.next()
 
     def __iter__(self): return self
