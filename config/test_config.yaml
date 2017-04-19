@@ -1,0 +1,41 @@
+dynet_seed: 3416888402
+dynet_mem : 3000
+dynet_gpus : 0
+exp_name : test
+word_emb : False
+bidir: True
+verbose : True
+att_dim : 40
+emb_dim : 64
+hidden_dim : 64
+max_len : 10
+dropout_rate : 0.5
+gradient_clipping: 1.0
+trainer: sgd
+train:
+  train : True
+  train_dst : en-de/train.en-de.low.filt.en
+  train_src : en-de/train.en-de.low.filt.de
+  valid_src : en-de/valid.en-de.low.de
+  valid_dst : en-de/valid.en-de.low.en
+  test_src : en-de/valid.en-de.low.de
+  test_dst : en-de/valid.en-de.low.en
+  test_out : results/out.en-de.en
+  num_epochs : 1
+  batch_size : 5
+  dev_batch_size : 5
+  check_train_error_every : 1
+  check_valid_error_every : 5
+  test_every : 5
+  learning_rate : 0.01
+  learning_rate_decay : 0.0
+  beam_size : 1
+test:
+  test : True
+  test_src : en-de/valid.en-de.low.de
+  test_dst : en-de/valid.en-de.low.en
+  test_out : results/out.en-de.en
+  dic_src : test_src_dic.txt
+  dic_dst : test_trg_dic.txt
+  beam_size : 2
+  model : test_model.txt
