@@ -81,7 +81,6 @@ class Seq2SeqModel(object):
         self.Wo_p = self.model.add_parameters((self.di, self.out_dim))
         self.bo_p = self.model.add_parameters((self.di,), init=dy.ConstInitializer(0))
         # Softmax parameters
-        self.D_p = self.model.add_parameters((self.vt, self.di))
         self.b_p = self.model.add_parameters((self.vt,), init=dy.ConstInitializer(0))
 
     def prepare_batch(self, batch, eos):
@@ -196,7 +195,7 @@ class Seq2SeqModel(object):
         # Add parameters to the graph
         Wp, bp = self.Wp_p.expr(), self.bp_p.expr()
         Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
-        D, b = self.D_p.expr(), self.b_p.expr()
+        D, b = dy.transpose(dy.parameter(self.MT_p)), self.b_p.expr()
         # Initialize decoder with last encoding
         last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
         init_state = dy.affine_transform([bp, Wp, last_enc])
@@ -267,7 +266,7 @@ class Seq2SeqModel(object):
         # Add parameters to the graph
         Wp, bp = self.Wp_p.expr(), self.bp_p.expr()
         Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
-        D, b = self.D_p.expr(), self.b_p.expr()
+        D, b = dy.transpose(dy.parameter(self.MT_p)), self.b_p.expr()
         # Initialize decoder with last encoding
         last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
         init_state = dy.affine_transform([bp, Wp, last_enc])
