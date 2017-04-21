@@ -10,7 +10,7 @@ emb_dim : 64
 hidden_dim : 64
 max_len : 10
 dropout_rate : 0.5
-gradient_clipping: 1.0
+gradient_clip: 1.0
 trainer: sgd
 train:
   train : True
