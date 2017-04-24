@@ -92,10 +92,11 @@ parser.add_argument("--test",
 
 
 def parse_options():
-    """Get options from commanf line arguments and optionally config file
+    """Parse options from command line arguments and optionally config file
     
     Returns:
-        argparse.Namespace: arguments
+        Options
+        argparse.Namespace 
     """
     opt = parser.parse_args()
     if opt.config_file:
@@ -112,6 +113,7 @@ def parse_options():
                         continue
                 else:
                     arg_dict[key] = value
+    # Little trick : add dynet general options to sys.argv if they're not here already. Linked to this issue : https://github.com/clab/dynet/issues/475
     if opt.dynet_gpu and '--dynet-gpus' not in sys.argv:
         sys.argv.append('--dynet-gpus')
         sys.argv.append('1')
@@ -140,7 +142,14 @@ def print_config(opt, **kwargs):
         print(k, ':', v)
     print('======================')
 
+# Do this so sys.argv is changed upon import
 options = parse_options()
 
 def get_options():
+    """Clean way to get options
+    
+    Returns:
+        Options
+        argparse.Namespace 
+    """
     return options

@@ -7,7 +7,6 @@ sys.setdefaultencoding("utf-8")
 import numpy as np
 import dynet as dy
 
-
 class Seq2SeqModel(object):
     """A neural sequence to sequence model with attention
     

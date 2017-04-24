@@ -14,6 +14,7 @@ import data
 import seq2seq
 import evaluation
 
+
 def train(opt):
     # Load data =========================================================
     if opt.verbose:
@@ -38,7 +39,6 @@ def train(opt):
     valids_data = data.read_corpus(opt.valid_src, widss)
     validt_data = data.read_corpus(opt.valid_dst, widst)
 
-
     # Create model ======================================================
     if opt.verbose:
         print('Creating model')
@@ -61,6 +61,9 @@ def train(opt):
     if opt.trainer == 'sgd':
         trainer = dy.SimpleSGDTrainer(
             s2s.model, e0=opt.learning_rate, edecay=opt.learning_rate_decay)
+    if opt.trainer == 'clr':
+        trainer = dy.CyclicalSGDTrainer(s2s.model, e0_min=opt.learning_rate / 10,
+                                        e0_max=opt.learning_rate, edecay=opt.learning_rate_decay)
     elif opt.trainer == 'momentum':
         trainer = dy.MomentumSGDTrainer(
             s2s.model, e0=opt.learning_rate, edecay=opt.learning_rate_decay)
@@ -158,6 +161,7 @@ def train(opt):
                 start = time.time()
             i = i+1
         trainer.update_epoch()
+
 
 def test(opt):
     # Load data =========================================================
