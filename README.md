@@ -10,6 +10,8 @@ On top of this, you will also require
     argparse
     pyyaml
 
+You will also need `perl` to run the evaluation script.
+
 ## Running
 
 You can test your installation by running
@@ -25,10 +27,6 @@ Alternatively, you can set all the parameters via the command line, run
     python run.py -h
 
 For more details on the available parameters
-
-## Data
-
-The data is from the IWSLT2016 workshop for German-English translation, separated into a training set, validation set (the dev2010 set from IWSLT), and test set (the tst2010 set). There is an additional blind test set for which translations are not provided.
 
 ## Model
 
@@ -60,6 +58,10 @@ Where the probability is computed using an encoder decoder network :
 
 ![decode](https://www.latex4technics.com/imgtemp/ykovgk-1.png?1493056131)
 
+## Data
+
+The data is from the IWSLT2016 workshop for German-English translation, separated into a training set, validation set (the dev2010 set from IWSLT), and test set (the tst2010 set). There is an additional blind test set for which translations are not provided.
+
 ## Performance
 
 With the configuration stored in `config/best_config.yaml`, a BLEU score of 27.26 is attained on the test set.
@@ -69,11 +71,23 @@ Here are some samples (randomly selected, edited some spacing for clarity):
 | Target | Hypothesis |
 |--------|------------|
 |`i didn't mention the skin of my beloved fish, which was delicious -- and i don't like fish skin ; i don't like it seared, i don't like it crispy. ` | `i don't mention the skin of my beloved fish that was delicious, and i don't like a UNK. i don't like it. i don't like you.`|
-|`we will be as good at whatever we do as the greatest people in the world. | we 're going to be so good at doing whatever the most significant people in the world.|
-|`i actually am. | that 's me even.|
-|`tremendously challenging. | a great challenge.|
-|`if you 're counting on it for 100 percent, you need an incredible miracle battery. | if you want to support 100 percent of it, you need an incredible UNK.|
+|`we will be as good at whatever we do as the greatest people in the world.`| `we 're going to be so good at doing whatever the most significant people in the world.`|
+|`i actually am.`| `that 's me even.`|
+|`tremendously challenging.`| `a great challenge.`|
+|`if you 're counting on it for 100 percent, you need an incredible miracle battery.`| `if you want to support 100 percent of it, you need an incredible UNK.`|
 
-## Known issue
+## Acknowledgments
 
-As of now you can't configure the global dynet parameters with the yaml config, you need to specify them manually in the command line
+Thanks to 
+
+- [Graham Neubig](http://phontron.com/) for the [course](http://phontron.com/class/mtandseq2seq2017/) project from which this repo stemmed.
+- Chunting Zhou for some much needed help.
+
+
+## More info
+
+Check [this tutorial](https://arxiv.org/abs/1703.01619) for more info on sequence to sequence model.
+
+This project was written in [Dynet](https://github.com/clab/dynet), a cool dynamic framework for deep learning.
+
+Hit me up at pmichel1[at]cs.cmu.edu for any question (or open an issue on github).
