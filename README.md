@@ -64,7 +64,7 @@ The data is from the IWSLT2016 workshop for German-English translation, separate
 
 ## Performance
 
-With the configuration stored in `config/best_config.yaml`, a BLEU score of 27.26 is attained on the test set.
+With the configuration stored in `config/best_config.yaml`, a BLEU score of __27.26__ is attained on the test set.
 
 Here are some samples (randomly selected, edited some spacing for clarity):
 
