@@ -1,0 +1,523 @@
+ModuleCmd_Load.c(208):ERROR:105: Unable to locate a modulefile for 'gcc-5.4.0'
+[dynet] initializing CUDA
+Request for 1 GPU ...
+[dynet] Device Number: 0
+[dynet]   Device name: TITAN X (Pascal)
+[dynet]   Memory Clock Rate (KHz): 5005000
+[dynet]   Memory Bus Width (bits): 384
+[dynet]   Peak Memory Bandwidth (GB/s): 480.48
+[dynet]   Memory Free (GB): 12.6211/12.7816
+[dynet]
+[dynet] Device(s) selected: 0
+[dynet] random seed: 3416888402
+[dynet] allocating memory: 512MB
+[dynet] memory allocation done.
+Reading corpora
+Creating model
+Using adam optimizer
+======= CONFIG =======
+trainer : adam
+test_out : results/test.out.en-de.en
+dropout_rate : 0.5
+train_dst : en-de/train.en-de.low.filt.en
+word_emb : False
+test_src : en-de/test.en-de.de
+valid_bleu_every : 2500
+att_dim : 256
+num_epochs : 10
+dic_src : None
+check_valid_error_every : 2500
+src_vocab_size : 40000
+bidir : True
+valid_dst : en-de/valid.en-de.low.en
+verbose : True
+dynet_mem : 512
+test_dst : en-de/test.en-de.en
+exp_name : medium_model_dropout_bidir_adam
+train_src : en-de/train.en-de.low.filt.de
+dev_batch_size : 10
+dynet_seed : 3416888402
+env : train
+dic_dst : None
+test : False
+dynet_gpu : True
+learning_rate : 0.001
+valid_out : results/medium_model_dropout_bidir_adam_valid.de-en.en
+trg_vocab_size : 20000
+batch_size : 32
+valid_src : en-de/valid.en-de.low.de
+train : True
+check_train_error_every : 100
+gradient_clip : 1.0
+learning_rate_decay : 0.0
+max_len : 80
+emb_dim : 512
+beam_size : 3
+hidden_dim : 512
+model : None
+trg_dict_size : 20003
+src_dict_size : 37086
+======================
+Creating batch loaders
+Reseeding the dataset
+Reseeding the dataset
+starting training
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=6.127890, ppl=458.467973, time=17.699302 s, tokens processed=69100
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=5.153247, ppl=172.992276, time=17.819549 s, tokens processed=70328
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=4.848326, ppl=127.526747, time=17.194840 s, tokens processed=67819
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=4.746998, ppl=115.237837, time=17.721849 s, tokens processed=70009
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=4.532323, ppl=92.974251, time=17.412214 s, tokens processed=67768
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=4.524144, ppl=92.216995, time=19.229694 s, tokens processed=76495
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=4.298569, ppl=73.594390, time=17.777071 s, tokens processed=69259
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=4.266836, ppl=71.295733, time=18.374330 s, tokens processed=70699
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=4.028521, ppl=56.177746, time=16.457844 s, tokens processed=62588
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=4.025249, ppl=55.994239, time=18.741240 s, tokens processed=71938
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.976992, ppl=53.356296, time=17.325230 s, tokens processed=68047
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.781995, ppl=43.903542, time=16.333913 s, tokens processed=61865
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.969522, ppl=52.959229, time=19.437383 s, tokens processed=76754
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.851413, ppl=47.059503, time=20.351667 s, tokens processed=77687
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.683088, ppl=39.769014, time=18.209550 s, tokens processed=69861
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.738308, ppl=42.026804, time=19.355372 s, tokens processed=75781
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.608290, ppl=36.902892, time=17.475956 s, tokens processed=67149
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.542144, ppl=34.540910, time=17.719880 s, tokens processed=68023
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.444114, ppl=31.315536, time=16.993937 s, tokens processed=64234
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.484930, ppl=32.620142, time=17.892097 s, tokens processed=69212
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.430629, ppl=30.896071, time=18.862900 s, tokens processed=72277
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.365071, ppl=28.935562, time=17.155607 s, tokens processed=65153
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.453264, ppl=31.603363, time=19.419187 s, tokens processed=75405
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.270144, ppl=26.315142, time=17.111087 s, tokens processed=65560
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.217456, ppl=24.964528, time=16.637847 s, tokens processed=64278
+Reseeding the dataset
+[epoch 0] Dev loss=3.006646, ppl=20.219461, time=5.002585 s, tokens processed=21698
+Start translating validation set, buckle up!
+Finished translating validation set 193.531602144 elapsed.
+BLEU = 16.46, 48.5/22.2/11.4/6.0 (BP=1.000, ratio=1.022, hyp_len=20584, ref_len=20134)
+
+Best BLEU score up to date, saving model to medium_model_dropout_bidir_adam_model.txt
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.234636, ppl=25.397138, time=17.023504 s, tokens processed=67379
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.312209, ppl=27.445677, time=18.669300 s, tokens processed=73371
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.218130, ppl=24.981371, time=17.261506 s, tokens processed=68498
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.150529, ppl=23.348410, time=16.888392 s, tokens processed=66535
+[epoch=0 eta=0.001 clips=100 updates=100]  Training_loss=3.249265, ppl=25.771379, time=19.014799 s, tokens processed=76006
+Reseeding the dataset
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=3.041367, ppl=20.933838, time=16.516552 s, tokens processed=65660
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=3.016819, ppl=20.426213, time=18.883762 s, tokens processed=76683
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.848908, ppl=17.268918, time=16.740388 s, tokens processed=66247
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.748241, ppl=15.615148, time=16.240906 s, tokens processed=62417
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.915948, ppl=18.466309, time=18.482287 s, tokens processed=72016
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.872676, ppl=17.684271, time=18.528977 s, tokens processed=72024
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.850863, ppl=17.302705, time=17.594368 s, tokens processed=68749
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.747463, ppl=15.602998, time=16.355382 s, tokens processed=63868
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.827270, ppl=16.899257, time=17.635181 s, tokens processed=68805
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.839266, ppl=17.103203, time=17.947842 s, tokens processed=70654
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.881888, ppl=17.847945, time=19.073594 s, tokens processed=74676
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.777306, ppl=16.075658, time=17.188210 s, tokens processed=67309
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.674631, ppl=14.506991, time=16.033482 s, tokens processed=62428
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.784957, ppl=16.199116, time=18.648153 s, tokens processed=72764
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.755866, ppl=15.734658, time=18.208826 s, tokens processed=70729
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.753791, ppl=15.702048, time=18.010037 s, tokens processed=70541
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.773487, ppl=16.014381, time=18.713449 s, tokens processed=73512
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.778592, ppl=16.096342, time=18.298650 s, tokens processed=72622
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.772057, ppl=15.991495, time=18.328134 s, tokens processed=71757
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.708407, ppl=15.005348, time=17.536378 s, tokens processed=69400
+Reseeding the dataset
+[epoch 1] Dev loss=2.561666, ppl=12.957391, time=4.929166 s, tokens processed=21840
+Start translating validation set, buckle up!
+Finished translating validation set 190.331375837 elapsed.
+BLEU = 22.60, 55.4/28.9/16.6/9.8 (BP=1.000, ratio=1.009, hyp_len=20324, ref_len=20134)
+
+Best BLEU score up to date, saving model to medium_model_dropout_bidir_adam_model.txt
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.659747, ppl=14.292666, time=17.167818 s, tokens processed=68781
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.677437, ppl=14.547763, time=16.975818 s, tokens processed=68263
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.617857, ppl=13.706324, time=16.749079 s, tokens processed=65871
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.648442, ppl=14.132011, time=17.204531 s, tokens processed=66927
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.651619, ppl=14.176974, time=17.914190 s, tokens processed=69087
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.621577, ppl=13.757402, time=17.586116 s, tokens processed=67921
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.717205, ppl=15.137946, time=17.856592 s, tokens processed=70464
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.649585, ppl=14.148162, time=17.875007 s, tokens processed=69995
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.652876, ppl=14.194798, time=16.943239 s, tokens processed=66859
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.639813, ppl=14.010589, time=18.196191 s, tokens processed=71245
+[epoch=1 eta=0.001 clips=100 updates=100]  Training_loss=2.706023, ppl=14.969617, time=18.606070 s, tokens processed=74765
+Reseeding the dataset
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.574265, ppl=13.121668, time=18.352574 s, tokens processed=70653
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.254357, ppl=9.529166, time=16.811657 s, tokens processed=66044
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.367637, ppl=10.672140, time=18.251835 s, tokens processed=71593
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.295830, ppl=9.932681, time=17.451330 s, tokens processed=67547
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.309368, ppl=10.068060, time=17.567679 s, tokens processed=68880
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.390696, ppl=10.921088, time=18.177519 s, tokens processed=72213
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.275515, ppl=9.732931, time=17.248971 s, tokens processed=66966
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.293097, ppl=9.905564, time=17.441726 s, tokens processed=67287
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.372169, ppl=10.720619, time=18.254328 s, tokens processed=70960
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.356623, ppl=10.555245, time=18.611897 s, tokens processed=72341
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.354362, ppl=10.531411, time=17.558221 s, tokens processed=70048
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.305603, ppl=10.030221, time=18.184304 s, tokens processed=71543
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.290889, ppl=9.883724, time=17.090209 s, tokens processed=65779
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.289052, ppl=9.865582, time=17.648241 s, tokens processed=68648
+Reseeding the dataset
+[epoch 2] Dev loss=2.381593, ppl=10.822128, time=4.990188 s, tokens processed=21704
+Start translating validation set, buckle up!
+Finished translating validation set 188.696201801 elapsed.
+BLEU = 25.04, 60.4/33.0/19.4/11.7 (BP=0.965, ratio=0.966, hyp_len=19440, ref_len=20134)
+
+Best BLEU score up to date, saving model to medium_model_dropout_bidir_adam_model.txt
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.305248, ppl=10.026661, time=16.620528 s, tokens processed=64904
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.357153, ppl=10.560846, time=18.153428 s, tokens processed=72350
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.319561, ppl=10.171212, time=18.052182 s, tokens processed=70205
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.368842, ppl=10.685013, time=19.012109 s, tokens processed=74742
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.290187, ppl=9.876781, time=17.806687 s, tokens processed=69340
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.305190, ppl=10.026079, time=17.470268 s, tokens processed=68288
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.324919, ppl=10.225850, time=17.800000 s, tokens processed=70543
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.293660, ppl=9.911143, time=17.208610 s, tokens processed=68036
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.239682, ppl=9.390349, time=17.545458 s, tokens processed=68215
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.291604, ppl=9.890789, time=17.043320 s, tokens processed=66732
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.235383, ppl=9.350065, time=16.582940 s, tokens processed=64489
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.347683, ppl=10.461298, time=18.826350 s, tokens processed=74519
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.247125, ppl=9.460497, time=16.553156 s, tokens processed=65616
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.345316, ppl=10.436568, time=18.434474 s, tokens processed=72761
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.364052, ppl=10.633953, time=18.534098 s, tokens processed=73197
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.263449, ppl=9.616194, time=16.967949 s, tokens processed=66615
+[epoch=2 eta=0.001 clips=100 updates=100]  Training_loss=2.331401, ppl=10.292352, time=17.917208 s, tokens processed=71373
+Reseeding the dataset
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.176139, ppl=8.812213, time=17.424441 s, tokens processed=69355
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.930554, ppl=6.893329, time=16.323552 s, tokens processed=63875
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.991099, ppl=7.323579, time=17.460968 s, tokens processed=69892
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.020408, ppl=7.541400, time=17.877772 s, tokens processed=70218
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.962321, ppl=7.115825, time=16.678481 s, tokens processed=65323
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.052985, ppl=7.791125, time=19.367264 s, tokens processed=74434
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.971864, ppl=7.184054, time=17.084404 s, tokens processed=67034
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.031571, ppl=7.626057, time=17.851084 s, tokens processed=69082
+Reseeding the dataset
+[epoch 3] Dev loss=2.305886, ppl=10.033060, time=4.929963 s, tokens processed=21785
+Start translating validation set, buckle up!
+Finished translating validation set 178.18442893 elapsed.
+BLEU = 26.36, 62.4/35.0/21.2/13.2 (BP=0.942, ratio=0.944, hyp_len=19005, ref_len=20134)
+
+Best BLEU score up to date, saving model to medium_model_dropout_bidir_adam_model.txt
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.989952, ppl=7.315186, time=17.531736 s, tokens processed=68711
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.054817, ppl=7.805410, time=17.711175 s, tokens processed=70164
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.013145, ppl=7.486827, time=17.732375 s, tokens processed=69189
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.097170, ppl=8.143091, time=18.618497 s, tokens processed=74051
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.058400, ppl=7.833426, time=18.041579 s, tokens processed=71905
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.015599, ppl=7.505221, time=17.672959 s, tokens processed=69854
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.066846, ppl=7.899867, time=17.744783 s, tokens processed=71527
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.942378, ppl=6.975317, time=16.830311 s, tokens processed=64700
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.096919, ppl=8.141051, time=19.108049 s, tokens processed=75645
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.993505, ppl=7.341216, time=16.374850 s, tokens processed=64595
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.096897, ppl=8.140873, time=18.393436 s, tokens processed=73351
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.096819, ppl=8.140236, time=18.951797 s, tokens processed=75419
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.955477, ppl=7.067289, time=16.012852 s, tokens processed=61520
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.107355, ppl=8.226452, time=19.305571 s, tokens processed=77104
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.079661, ppl=8.001756, time=18.092917 s, tokens processed=71078
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.011846, ppl=7.477106, time=17.237140 s, tokens processed=68509
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.048102, ppl=7.753172, time=17.869630 s, tokens processed=69674
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.063858, ppl=7.876299, time=17.840222 s, tokens processed=70529
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.035793, ppl=7.658326, time=17.737623 s, tokens processed=68951
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.106062, ppl=8.215822, time=18.015445 s, tokens processed=71070
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=1.952847, ppl=7.048730, time=16.519829 s, tokens processed=64413
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.122491, ppl=8.351919, time=18.221598 s, tokens processed=72198
+[epoch=3 eta=0.001 clips=100 updates=100]  Training_loss=2.058189, ppl=7.831775, time=17.796477 s, tokens processed=68511
+Reseeding the dataset
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.840728, ppl=6.301122, time=16.808303 s, tokens processed=64979
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.810553, ppl=6.113827, time=18.739356 s, tokens processed=74037
+Reseeding the dataset
+[epoch 4] Dev loss=2.299929, ppl=9.973478, time=4.905710 s, tokens processed=21761
+Start translating validation set, buckle up!
+Finished translating validation set 180.571815014 elapsed.
+BLEU = 27.04, 62.3/35.1/21.5/13.4 (BP=0.960, ratio=0.961, hyp_len=19340, ref_len=20134)
+
+Best BLEU score up to date, saving model to medium_model_dropout_bidir_adam_model.txt
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.678861, ppl=5.359449, time=15.928353 s, tokens processed=63969
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.819552, ppl=6.169094, time=18.638430 s, tokens processed=74067
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.798865, ppl=6.042784, time=19.138516 s, tokens processed=74910
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.819046, ppl=6.165976, time=17.350812 s, tokens processed=69256
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.750645, ppl=5.758318, time=16.396424 s, tokens processed=64858
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.797411, ppl=6.034006, time=17.114566 s, tokens processed=67722
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.858187, ppl=6.412101, time=18.361407 s, tokens processed=72792
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.765796, ppl=5.846224, time=16.856816 s, tokens processed=66840
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.796831, ppl=6.030506, time=16.612695 s, tokens processed=65492
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.734600, ppl=5.666660, time=16.296061 s, tokens processed=63872
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.905717, ppl=6.724227, time=19.561830 s, tokens processed=76773
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.728956, ppl=5.634766, time=16.703393 s, tokens processed=65075
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.812744, ppl=6.127240, time=17.326177 s, tokens processed=67444
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.850127, ppl=6.360630, time=17.732842 s, tokens processed=70346
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.829725, ppl=6.232172, time=17.569594 s, tokens processed=68757
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.806358, ppl=6.088234, time=17.088104 s, tokens processed=65727
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.739168, ppl=5.692604, time=16.539301 s, tokens processed=63594
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.812327, ppl=6.124685, time=17.471086 s, tokens processed=67887
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.821734, ppl=6.182567, time=17.518412 s, tokens processed=68245
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.997420, ppl=7.370020, time=20.782409 s, tokens processed=84639
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.808726, ppl=6.102667, time=17.536075 s, tokens processed=67361
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.835751, ppl=6.269838, time=18.171931 s, tokens processed=69998
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.857604, ppl=6.408365, time=16.795028 s, tokens processed=64648
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.824450, ppl=6.199383, time=17.595119 s, tokens processed=68213
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.879182, ppl=6.548143, time=17.587612 s, tokens processed=70089
+Reseeding the dataset
+[epoch 4] Dev loss=2.315560, ppl=10.130592, time=5.074668 s, tokens processed=21811
+Start translating validation set, buckle up!
+Finished translating validation set 224.243502855 elapsed.
+BLEU = 26.20, 64.2/36.2/22.1/13.7 (BP=0.904, ratio=0.908, hyp_len=18283, ref_len=20134)
+
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.774745, ppl=5.898779, time=16.651325 s, tokens processed=64303
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.897509, ppl=6.669263, time=18.729271 s, tokens processed=73897
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.961155, ppl=7.107533, time=18.750636 s, tokens processed=75627
+[epoch=4 eta=0.001 clips=100 updates=100]  Training_loss=1.892898, ppl=6.638581, time=18.723540 s, tokens processed=72432
+Reseeding the dataset
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.680455, ppl=5.367997, time=17.781786 s, tokens processed=70536
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.537883, ppl=4.654726, time=17.682259 s, tokens processed=69575
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.597520, ppl=4.940764, time=17.535067 s, tokens processed=70443
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.620124, ppl=5.053718, time=18.165587 s, tokens processed=71026
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.664055, ppl=5.280680, time=18.061580 s, tokens processed=71033
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.634243, ppl=5.125578, time=17.991926 s, tokens processed=70383
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.589428, ppl=4.900947, time=17.115312 s, tokens processed=66904
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.617422, ppl=5.040082, time=17.534773 s, tokens processed=69017
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.624569, ppl=5.076233, time=17.759589 s, tokens processed=69898
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.609615, ppl=5.000887, time=17.383947 s, tokens processed=68369
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.663427, ppl=5.277363, time=17.266056 s, tokens processed=69378
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.640386, ppl=5.157162, time=17.402285 s, tokens processed=69511
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.548624, ppl=4.704993, time=15.622240 s, tokens processed=60617
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.591583, ppl=4.911517, time=16.538625 s, tokens processed=64333
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.635584, ppl=5.132453, time=17.385168 s, tokens processed=67400
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.692342, ppl=5.432189, time=17.466452 s, tokens processed=68877
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.637244, ppl=5.140981, time=17.669453 s, tokens processed=68403
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.753009, ppl=5.771942, time=20.065964 s, tokens processed=78556
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.696465, ppl=5.454630, time=18.042442 s, tokens processed=69935
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.759769, ppl=5.811097, time=19.219738 s, tokens processed=76213
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.782568, ppl=5.945104, time=18.609956 s, tokens processed=73849
+Reseeding the dataset
+[epoch 5] Dev loss=2.355009, ppl=10.538226, time=4.908491 s, tokens processed=21571
+Start translating validation set, buckle up!
+Finished translating validation set 209.461185932 elapsed.
+BLEU = 26.33, 63.1/35.4/21.5/13.3 (BP=0.932, ratio=0.934, hyp_len=18806, ref_len=20134)
+
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.657717, ppl=5.247318, time=17.463761 s, tokens processed=68574
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.653520, ppl=5.225341, time=18.181680 s, tokens processed=69676
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.701312, ppl=5.481136, time=17.738770 s, tokens processed=69659
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.735824, ppl=5.673601, time=18.398642 s, tokens processed=72201
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.750956, ppl=5.760107, time=17.887897 s, tokens processed=70406
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.673980, ppl=5.333354, time=17.935021 s, tokens processed=70337
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.690594, ppl=5.422700, time=17.825475 s, tokens processed=69842
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.705464, ppl=5.503937, time=18.032975 s, tokens processed=70883
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.654836, ppl=5.232224, time=17.406055 s, tokens processed=67896
+[epoch=5 eta=0.001 clips=100 updates=100]  Training_loss=1.634427, ppl=5.126520, time=16.452179 s, tokens processed=64572
+Reseeding the dataset
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.531765, ppl=4.626336, time=17.999663 s, tokens processed=71349
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.394750, ppl=4.033968, time=16.797149 s, tokens processed=65281
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.392480, ppl=4.024819, time=17.218331 s, tokens processed=67305
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.423292, ppl=4.150762, time=16.787427 s, tokens processed=64949
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.404552, ppl=4.073700, time=16.415940 s, tokens processed=64224
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.554277, ppl=4.731664, time=19.552468 s, tokens processed=77237
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.495769, ppl=4.462767, time=17.400508 s, tokens processed=69756
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.527190, ppl=4.605218, time=17.624108 s, tokens processed=71366
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.487205, ppl=4.424710, time=17.159107 s, tokens processed=67191
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.388267, ppl=4.007897, time=16.255442 s, tokens processed=62583
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.532103, ppl=4.627899, time=19.240156 s, tokens processed=75090
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.456653, ppl=4.291571, time=16.871048 s, tokens processed=65179
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.469693, ppl=4.347902, time=17.479114 s, tokens processed=66543
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.506030, ppl=4.508796, time=18.095932 s, tokens processed=70382
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.472029, ppl=4.358069, time=17.183415 s, tokens processed=66720
+Reseeding the dataset
+[epoch 6] Dev loss=2.399183, ppl=11.014178, time=4.901686 s, tokens processed=21787
+Start translating validation set, buckle up!
+Finished translating validation set 175.840738058 elapsed.
+BLEU = 26.56, 63.2/35.8/21.7/13.4 (BP=0.933, ratio=0.935, hyp_len=18819, ref_len=20134)
+
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.481826, ppl=4.400974, time=17.683034 s, tokens processed=69090
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.473356, ppl=4.363857, time=16.862500 s, tokens processed=66783
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.512076, ppl=4.536139, time=17.602464 s, tokens processed=70479
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.497840, ppl=4.472020, time=16.869237 s, tokens processed=66145
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.531190, ppl=4.623674, time=17.382849 s, tokens processed=68873
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.615119, ppl=5.028488, time=19.278345 s, tokens processed=77226
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.467638, ppl=4.338973, time=16.856343 s, tokens processed=65000
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.577556, ppl=4.843105, time=18.026005 s, tokens processed=70173
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.655827, ppl=5.237408, time=18.410614 s, tokens processed=72861
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.622866, ppl=5.067591, time=18.935685 s, tokens processed=74477
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.625736, ppl=5.082158, time=19.305403 s, tokens processed=76765
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.529820, ppl=4.617346, time=18.006903 s, tokens processed=69981
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.618209, ppl=5.044049, time=17.485839 s, tokens processed=70124
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.556203, ppl=4.740785, time=16.855032 s, tokens processed=66280
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.635024, ppl=5.129583, time=18.902625 s, tokens processed=75783
+[epoch=6 eta=0.001 clips=100 updates=100]  Training_loss=1.565247, ppl=4.783854, time=17.808775 s, tokens processed=70216
+Reseeding the dataset
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.399463, ppl=4.053023, time=19.338869 s, tokens processed=77369
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.293151, ppl=3.644251, time=18.073783 s, tokens processed=70422
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.394814, ppl=4.034224, time=18.762201 s, tokens processed=75359
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.279040, ppl=3.593189, time=16.764680 s, tokens processed=66187
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.332395, ppl=3.790109, time=16.764666 s, tokens processed=65936
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.326222, ppl=3.766785, time=18.020495 s, tokens processed=70622
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.291551, ppl=3.638426, time=16.603553 s, tokens processed=65328
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.300450, ppl=3.670948, time=16.794635 s, tokens processed=65114
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.349535, ppl=3.855633, time=17.496470 s, tokens processed=69240
+Reseeding the dataset
+[epoch 7] Dev loss=2.492548, ppl=12.092051, time=4.851475 s, tokens processed=21801
+Start translating validation set, buckle up!
+Finished translating validation set 173.885400057 elapsed.
+BLEU = 25.46, 63.5/35.1/21.2/13.0 (BP=0.909, ratio=0.913, hyp_len=18389, ref_len=20134)
+
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.416215, ppl=4.121491, time=18.602211 s, tokens processed=74244
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.353271, ppl=3.870065, time=17.852040 s, tokens processed=70616
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.363674, ppl=3.910536, time=16.742431 s, tokens processed=66011
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.373984, ppl=3.951062, time=17.699740 s, tokens processed=70787
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.292765, ppl=3.642847, time=16.313418 s, tokens processed=63686
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.365509, ppl=3.917717, time=16.667625 s, tokens processed=66230
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.471781, ppl=4.356990, time=18.401536 s, tokens processed=73682
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.404270, ppl=4.072551, time=17.564920 s, tokens processed=69516
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.489248, ppl=4.433760, time=18.718648 s, tokens processed=74338
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.351980, ppl=3.865069, time=17.070357 s, tokens processed=65667
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.431573, ppl=4.185278, time=18.834299 s, tokens processed=73828
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.413157, ppl=4.108906, time=17.883813 s, tokens processed=69843
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.352425, ppl=3.866792, time=16.817777 s, tokens processed=65733
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.482752, ppl=4.405053, time=18.142964 s, tokens processed=71542
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.407932, ppl=4.087495, time=17.792736 s, tokens processed=68854
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.517781, ppl=4.562091, time=18.352062 s, tokens processed=73067
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.412357, ppl=4.105620, time=16.760707 s, tokens processed=65916
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.475972, ppl=4.375286, time=18.024894 s, tokens processed=71049
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.386657, ppl=4.001450, time=16.936531 s, tokens processed=64928
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.465665, ppl=4.330423, time=17.455209 s, tokens processed=69614
+[epoch=7 eta=0.001 clips=100 updates=100]  Training_loss=1.444576, ppl=4.240055, time=17.151757 s, tokens processed=68714
+Reseeding the dataset
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.463339, ppl=4.320362, time=18.660085 s, tokens processed=74179
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.140121, ppl=3.127146, time=16.681822 s, tokens processed=64791
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.224599, ppl=3.402802, time=17.021618 s, tokens processed=67623
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.189508, ppl=3.285463, time=17.634168 s, tokens processed=70446
+Reseeding the dataset
+[epoch 8] Dev loss=2.570967, ppl=13.078466, time=4.720522 s, tokens processed=21836
+Start translating validation set, buckle up!
+Finished translating validation set 177.410722017 elapsed.
+BLEU = 25.83, 62.0/34.5/20.8/12.8 (BP=0.941, ratio=0.943, hyp_len=18977, ref_len=20134)
+
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.185191, ppl=3.271311, time=17.907746 s, tokens processed=69975
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.222461, ppl=3.395535, time=17.398894 s, tokens processed=68253
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.165830, ppl=3.208586, time=17.186455 s, tokens processed=67204
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.290003, ppl=3.632796, time=18.640956 s, tokens processed=74453
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.296922, ppl=3.658020, time=18.456432 s, tokens processed=73926
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.245647, ppl=3.475183, time=17.845963 s, tokens processed=71243
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.232271, ppl=3.429006, time=17.013104 s, tokens processed=67265
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.268803, ppl=3.556594, time=18.606461 s, tokens processed=72867
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.238850, ppl=3.451642, time=17.386327 s, tokens processed=68218
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.244336, ppl=3.470629, time=17.074438 s, tokens processed=66596
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.318014, ppl=3.735995, time=18.261856 s, tokens processed=72267
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.285839, ppl=3.617702, time=16.467956 s, tokens processed=64342
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.248613, ppl=3.485506, time=16.838350 s, tokens processed=65080
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.276935, ppl=3.585633, time=17.911895 s, tokens processed=69734
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.395967, ppl=4.038880, time=19.354244 s, tokens processed=76038
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.283486, ppl=3.609201, time=17.627653 s, tokens processed=66949
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.372508, ppl=3.945233, time=18.802373 s, tokens processed=74215
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.272088, ppl=3.568296, time=17.237588 s, tokens processed=66787
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.251822, ppl=3.496706, time=17.187614 s, tokens processed=66121
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.278159, ppl=3.590026, time=17.203490 s, tokens processed=66376
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.294821, ppl=3.650341, time=18.147862 s, tokens processed=70060
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.356058, ppl=3.880863, time=18.083485 s, tokens processed=70928
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.283766, ppl=3.610212, time=16.462358 s, tokens processed=62526
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.451858, ppl=4.271043, time=19.705094 s, tokens processed=78613
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.388756, ppl=4.009857, time=18.891311 s, tokens processed=74389
+Reseeding the dataset
+[epoch 8] Dev loss=2.592180, ppl=13.358860, time=5.006909 s, tokens processed=21789
+Start translating validation set, buckle up!
+Finished translating validation set 174.389785051 elapsed.
+BLEU = 26.01, 63.5/35.5/21.5/13.5 (BP=0.914, ratio=0.918, hyp_len=18481, ref_len=20134)
+
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.339507, ppl=3.817160, time=17.881161 s, tokens processed=71137
+[epoch=8 eta=0.001 clips=100 updates=100]  Training_loss=1.311481, ppl=3.711666, time=15.744711 s, tokens processed=62160
+Reseeding the dataset
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.319004, ppl=3.739696, time=17.805470 s, tokens processed=70500
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.081429, ppl=2.948891, time=17.420436 s, tokens processed=69029
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.029894, ppl=2.800769, time=16.781221 s, tokens processed=65463
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.183756, ppl=3.266622, time=18.669884 s, tokens processed=73845
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.057750, ppl=2.879883, time=16.737748 s, tokens processed=66180
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.170946, ppl=3.225043, time=19.019825 s, tokens processed=76502
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.141416, ppl=3.131201, time=17.184979 s, tokens processed=69156
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.020367, ppl=2.774212, time=15.918654 s, tokens processed=63305
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.146761, ppl=3.147981, time=17.078038 s, tokens processed=67697
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.150849, ppl=3.160876, time=16.390886 s, tokens processed=65549
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.193831, ppl=3.299699, time=17.717756 s, tokens processed=69898
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.108768, ppl=3.030621, time=16.484324 s, tokens processed=63882
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.257749, ppl=3.517495, time=18.218191 s, tokens processed=72055
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.110085, ppl=3.034615, time=16.516291 s, tokens processed=63852
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.219742, ppl=3.386314, time=18.481297 s, tokens processed=72168
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.149105, ppl=3.155369, time=17.651490 s, tokens processed=69064
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.186668, ppl=3.276148, time=17.914505 s, tokens processed=69247
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.193488, ppl=3.298565, time=18.062440 s, tokens processed=71126
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.261257, ppl=3.529854, time=18.040508 s, tokens processed=69709
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.214981, ppl=3.370231, time=18.027248 s, tokens processed=70636
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.127368, ppl=3.087520, time=16.855483 s, tokens processed=65484
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.275455, ppl=3.580330, time=19.156450 s, tokens processed=74928
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.192680, ppl=3.295903, time=17.278085 s, tokens processed=67206
+Reseeding the dataset
+[epoch 9] Dev loss=2.687131, ppl=14.689468, time=4.750584 s, tokens processed=21751
+Start translating validation set, buckle up!
+Finished translating validation set 178.054548025 elapsed.
+BLEU = 25.87, 63.1/34.9/21.1/13.0 (BP=0.926, ratio=0.929, hyp_len=18704, ref_len=20134)
+
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.294021, ppl=3.647424, time=19.137323 s, tokens processed=76268
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.220188, ppl=3.387825, time=17.942119 s, tokens processed=69892
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.260792, ppl=3.528214, time=17.867796 s, tokens processed=70355
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.268460, ppl=3.555374, time=17.618929 s, tokens processed=70122
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.246620, ppl=3.478566, time=17.377217 s, tokens processed=68311
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.237931, ppl=3.448470, time=17.413324 s, tokens processed=68063
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.262467, ppl=3.534129, time=18.476535 s, tokens processed=71616
+[epoch=9 eta=0.001 clips=100 updates=100]  Training_loss=1.332712, ppl=3.791310, time=19.179439 s, tokens processed=74312
+Reseeding the dataset
+Done training!
+[dynet] initializing CUDA
+Request for 1 GPU ...
+[dynet] Device Number: 0
+[dynet]   Device name: TITAN X (Pascal)
+[dynet]   Memory Clock Rate (KHz): 5005000
+[dynet]   Memory Bus Width (bits): 384
+[dynet]   Peak Memory Bandwidth (GB/s): 480.48
+[dynet]   Memory Free (GB): 12.6211/12.7816
+[dynet]
+[dynet] Device(s) selected: 0
+[dynet] random seed: 3416888402
+[dynet] allocating memory: 512MB
+[dynet] memory allocation done.
+Reading corpora
+Creating model
+======= CONFIG =======
+trainer : adam
+test_out : results/medium_model_dropout_bidir_adam_test.de-en.en
+dropout_rate : 0.5
+train_dst : en-de/train.en-de.en
+word_emb : False
+test_src : en-de/test.en-de.low.de
+valid_bleu_every : 500
+att_dim : 256
+num_epochs : 1
+dic_src : test_src_dic.txt
+check_valid_error_every : 1000
+src_vocab_size : 40000
+bidir : True
+valid_dst : en-de/valid.en-de.en
+verbose : True
+dynet_mem : 512
+test_dst : en-de/test.en-de.low.en
+exp_name : medium_model_dropout_bidir_adam
+train_src : en-de/train.en-de.de
+dev_batch_size : 10
+dynet_seed : 3416888402
+env : test
+dic_dst : test_trg_dic.txt
+test : True
+dynet_gpu : True
+learning_rate : 1.0
+valid_out : results/valid.out.en-de.en
+trg_vocab_size : 20000
+batch_size : 20
+valid_src : en-de/valid.en-de.de
+train : False
+check_train_error_every : 100
+gradient_clip : 1.0
+learning_rate_decay : 0.0
+max_len : 80
+emb_dim : 512
+beam_size : 5
+hidden_dim : 512
+model : medium_model_dropout_bidir_adam_model.txt
+trg_dict_size : 20003
+src_dict_size : 37086
+======================
+Start running on test set, buckle up!
+Finished running on test set 477.609440804 elapsed.
+BLEU = 25.50, 56.6/31.8/19.4/12.1 (BP=1.000, ratio=1.061, hyp_len=33966, ref_len=32002)
+
+Done testing!

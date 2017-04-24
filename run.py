@@ -210,7 +210,7 @@ def test(opt):
     with open(opt.test_out, 'w+') as of:
         for x in tests_data:
             y = s2s.translate(x, beam_size=opt.beam_size)
-            translation = ' '.join([ids2wt[w] for w in y])
+            translation = ' '.join([ids2wt[w] for w in y[1:-1]])
             of.write(translation+'\n')
     _, details = evaluation.bleu_score(opt.test_dst, opt.test_out)
     test_elapsed = time.time()-test_start

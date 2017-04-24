@@ -32,8 +32,8 @@ train:
   trg_vocab_size : 20000
 test:
   test : True
-  test_src : en-de/valid.en-de.low.de
-  test_dst : en-de/valid.en-de.low.en
+  test_src : en-de/test.en-de.low.de
+  test_dst : en-de/test.en-de.low.en
   test_out : results/medium_model_dropout_bidir_adam_test.de-en.en
   dic_src : test_src_dic.txt
   dic_dst : test_trg_dic.txt
