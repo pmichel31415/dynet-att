@@ -198,7 +198,7 @@ def test(opt):
 
     if s2s.model_file is not None:
         s2s.load()
-    s2s.model_file = opt.exp_name+'_model.txt'
+    s2s.model_file = opt.exp_name + '_model'
     # Print configuration ===============================================
     if opt.verbose:
         options.print_config(opt, src_dict_size=len(widss), trg_dict_size=len(widst))

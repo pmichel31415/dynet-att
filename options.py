@@ -14,32 +14,34 @@ parser.add_argument("--dynet-mem", default=512, type=int)
 parser.add_argument("--dynet-gpu", help="Use dynet with GPU", action="store_true")
 parser.add_argument("--config_file", '-c',
                     default=None, type=str)
-parser.add_argument("--env", '-e',
+parser.add_argument("--env", '-e', help="Environment in the config file",
                     default='train', type=str)
-parser.add_argument("--train_src", '-ts',
+parser.add_argument("--train_src", '-ts', help="Train data in the source language",
                     default='en-de/train.en-de.de', type=str)
-parser.add_argument("--train_dst", '-td',
+parser.add_argument("--train_dst", '-td', help="Train data in the target language",
                     default='en-de/train.en-de.en', type=str)
-parser.add_argument("--valid_src", '-vs',
+parser.add_argument("--valid_src", '-vs', help="Validation data in the source language",
                     default='en-de/valid.en-de.de', type=str)
-parser.add_argument("--valid_dst", '-vd',
+parser.add_argument("--valid_dst", '-vd', help="Validation data in the target language",
                     default='en-de/valid.en-de.en', type=str)
-parser.add_argument("--test_src", '-tes',
+parser.add_argument("--test_src", '-tes', help="Test data in the source language",
                     default='en-de/test.en-de.de', type=str)
-parser.add_argument("--test_dst", '-ted',
+parser.add_argument("--test_dst", '-ted', help="Test data in the target language",
                     default='en-de/test.en-de.en', type=str)
-parser.add_argument("--dic_src", '-dis',
+parser.add_argument("--dic_src", '-dis', help="File to save the source language dictionary to",
                     default=None, type=str)
-parser.add_argument("--dic_dst", '-did',
+parser.add_argument("--dic_dst", '-did', help="File to save the target language dictionary to",
                     default=None, type=str)
-parser.add_argument("--test_out", '-teo',
+parser.add_argument("--test_out", '-teo', help="File to save the translated test data",
                     default='results/test.out.en-de.en', type=str)
-parser.add_argument("--valid_out", '-vo',
+parser.add_argument("--valid_out", '-vo', help="File to save the translated validation data",
                     default='results/valid.out.en-de.en', type=str)
-parser.add_argument("--model", '-m', type=str, help='Model to load from')
-parser.add_argument("--trainer", '-tr', type=str, help='Optimizer', default='sgd')
-parser.add_argument('--num_epochs', '-ne',
-                    type=int, help='Number of epochs', default=1)
+parser.add_argument("--model", '-m', type=str,
+                    help='Model file ([exp_name]_model if not specified)')
+parser.add_argument("--trainer", '-tr', type=str,
+                    help='Optimizer. Choose from "sgd,clr,momentum,adam,rmsprop"', default='sgd')
+parser.add_argument('--num_epochs', '-ne', type=int, default=1,
+                    help='Number of epochs (full pass over the training data) to train on')
 parser.add_argument('--src_vocab_size', '-svs',
                     type=int, help='Maximum vocab size of the source language', default=40000)
 parser.add_argument('--trg_vocab_size', '-tvs',
@@ -49,13 +51,13 @@ parser.add_argument('--batch_size', '-bs',
 parser.add_argument('--dev_batch_size', '-dbs',
                     type=int, help='minibatch size for the validation set', default=10)
 parser.add_argument('--emb_dim', '-de',
-                    type=int, help='embedding size', default=256)
+                    type=int, help='Embedding dimension', default=256)
 parser.add_argument('--att_dim', '-da',
-                    type=int, help='attention size', default=256)
+                    type=int, help='Attention dimension', default=256)
 parser.add_argument('--hidden_dim', '-dh',
-                    type=int, help='hidden size', default=256)
+                    type=int, help='Hidden dimension (for the recurrent networks)', default=256)
 parser.add_argument('--dropout_rate', '-dr',
-                    type=float, help='dropout rate', default=0.0)
+                    type=float, help='Dropout rate', default=0.0)
 parser.add_argument('--gradient_clip', '-gc', type=float, default=1.0,
                     help='Gradient clipping. Negative value means no clipping')
 parser.add_argument('--learning_rate', '-lr',
@@ -78,7 +80,7 @@ parser.add_argument("--bidir", '-bid',
                     help="Activates bidirectionnal encoding",
                     action="store_true")
 parser.add_argument("--word_emb", '-we',
-                    help="Activates direct word embedding for attention",
+                    help="Activates direct word embedding for attention [currently deactivated]",
                     action="store_true")
 parser.add_argument("--verbose", '-v',
                     help="increase output verbosity",
@@ -93,7 +95,7 @@ parser.add_argument("--test",
 
 def parse_options():
     """Parse options from command line arguments and optionally config file
-    
+
     Returns:
         Options
         argparse.Namespace 
@@ -113,7 +115,8 @@ def parse_options():
                         continue
                 else:
                     arg_dict[key] = value
-    # Little trick : add dynet general options to sys.argv if they're not here already. Linked to this issue : https://github.com/clab/dynet/issues/475
+    # Little trick : add dynet general options to sys.argv if they're not here
+    # already. Linked to this issue : https://github.com/clab/dynet/issues/475
     if opt.dynet_gpu and '--dynet-gpus' not in sys.argv:
         sys.argv.append('--dynet-gpus')
         sys.argv.append('1')
@@ -128,9 +131,9 @@ def parse_options():
 
 def print_config(opt, **kwargs):
     """Print the current configuration
-    
+
     Prints command line arguments plus any kwargs
-    
+
     Arguments:
         opt (argparse.Namespace): Command line arguments
         **kwargs: Any other key=value pair
@@ -145,9 +148,10 @@ def print_config(opt, **kwargs):
 # Do this so sys.argv is changed upon import
 options = parse_options()
 
+
 def get_options():
     """Clean way to get options
-    
+
     Returns:
         Options
         argparse.Namespace 

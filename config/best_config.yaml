@@ -1,7 +1,7 @@
 dynet_seed: 3416888402
 dynet_mem : 512
 dynet_gpu : True
-exp_name : medium_model_dropout_bidir_adam
+exp_name : best
 word_emb : False
 bidir: True
 verbose : True
@@ -18,7 +18,7 @@ train:
   train_src : en-de/train.en-de.low.filt.de
   valid_src : en-de/valid.en-de.low.de
   valid_dst : en-de/valid.en-de.low.en
-  valid_out : results/medium_model_dropout_bidir_adam_valid.de-en.en
+  valid_out : output/valid.de-en.en
   num_epochs : 10
   batch_size : 32
   dev_batch_size : 10
@@ -34,8 +34,8 @@ test:
   test : True
   test_src : en-de/test.en-de.low.de
   test_dst : en-de/test.en-de.low.en
-  test_out : results/medium_model_dropout_bidir_adam_test.de-en.en
+  test_out : output/test.en-de.en
   dic_src : test_src_dic.txt
   dic_dst : test_trg_dic.txt
   beam_size : 5
-  model : medium_model_dropout_bidir_adam_model.txt
+  model : best_model

@@ -18,7 +18,7 @@ train:
   train_src : en-de/train.en-de.low.filt.de
   valid_src : en-de/valid.en-de.low.de
   valid_dst : en-de/valid.en-de.low.en
-  valid_out : results/out.en-de.en
+  valid_out : output/out.en-de.en
   num_epochs : 1
   batch_size : 5
   dev_batch_size : 5
@@ -32,8 +32,8 @@ test:
   test : True
   test_src : en-de/valid.en-de.low.de
   test_dst : en-de/valid.en-de.low.en
-  test_out : results/out.en-de.en
+  test_out : output/out.en-de.en
   dic_src : test_src_dic.txt
   dic_dst : test_trg_dic.txt
   beam_size : 2
-  model : test_model.txt
+  model : test_model

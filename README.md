@@ -83,7 +83,6 @@ Thanks to
 - [Graham Neubig](http://phontron.com/) for the [course](http://phontron.com/class/mtandseq2seq2017/) project from which this repo stemmed.
 - Chunting Zhou for some much needed help.
 
-
 ## More info
 
 Check [this tutorial](https://arxiv.org/abs/1703.01619) for more info on sequence to sequence model.
