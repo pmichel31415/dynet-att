@@ -62,7 +62,17 @@ Where the probability is computed using an encoder decoder network :
 
 ## Performance
 
-With the configuration stored in `config/best_config.yaml`, a BLEU score of 27.26 is attained on the test set
+With the configuration stored in `config/best_config.yaml`, a BLEU score of 27.26 is attained on the test set.
+
+Here are some samples (randomly selected, edited some spacing for clarity):
+
+| Target | Hypothesis |
+|--------|------------|
+|`i didn't mention the skin of my beloved fish, which was delicious -- and i don't like fish skin ; i don't like it seared, i don't like it crispy. ` | `i don't mention the skin of my beloved fish that was delicious, and i don't like a UNK. i don't like it. i don't like you.`|
+|`we will be as good at whatever we do as the greatest people in the world. | we 're going to be so good at doing whatever the most significant people in the world.|
+|`i actually am. | that 's me even.|
+|`tremendously challenging. | a great challenge.|
+|`if you 're counting on it for 100 percent, you need an incredible miracle battery. | if you want to support 100 percent of it, you need an incredible UNK.|
 
 ## Known issue
 
