@@ -28,6 +28,8 @@ Alternatively, you can set all the parameters via the command line, run
 
 For more details on the available parameters
 
+The `script` folder contains a bash script to launch training & testing. Beware that the default config uses the GPU.
+
 ## Model
 
 The current model uses LSTMs (`dynet.VanillaLSTM`) for the encoder(s) and decoder, as well as MLP attention.
