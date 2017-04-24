@@ -34,6 +34,32 @@ The data is from the IWSLT2016 workshop for German-English translation, separate
 
 The current model uses LSTMs (`dynet.VanillaLSTM`) for the encoder(s) and decoder, as well as MLP attention.
 
+More specifically given an input sentence 
+
+![in](https://www.latex4technics.com/imgtemp/vco293-3.png?1493055092)
+
+and an output sentence 
+
+![out](https://www.latex4technics.com/imgtemp/j213d5-1.png?1493055162)
+
+The model is trained to minimize the conditional log-likelihood
+
+![ll](https://www.latex4technics.com/imgtemp/owrs1n-1.png?1493055660)
+
+Where the probability is computed using an encoder decoder network :
+
+1. Encoder: with the default parameter, this encodes the source sentence with a bidirectional LSTM
+
+![encode](https://www.latex4technics.com/imgtemp/cx475y-1.png?1493056081)
+
+2. Attention : the attention scores are computed based on the encodings and the previous decoder output.
+
+![attention](https://www.latex4technics.com/imgtemp/ttii7g-1.png?1493055518)
+
+3. decoding : this uses an LSTM as well.
+
+![decode](https://www.latex4technics.com/imgtemp/ykovgk-1.png?1493056131)
+
 ## Performance
 
 With the configuration stored in `config/best_config.yaml`, a BLEU score of 25.81 is attained on the test set
