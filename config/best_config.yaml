@@ -1,6 +1,6 @@
 dynet_seed: 3416888402
 dynet_mem : 512
-dynet_gpus : 1
+dynet_gpu : True
 exp_name : medium_model_dropout_bidir_adam
 word_emb : False
 bidir: True

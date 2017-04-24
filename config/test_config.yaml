@@ -1,6 +1,6 @@
 dynet_seed: 3416888402
 dynet_mem : 3000
-dynet_gpus : 0
+dynet_gpu : False
 exp_name : test
 word_emb : False
 bidir: True

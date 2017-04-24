@@ -11,7 +11,7 @@ import yaml
 parser = argparse.ArgumentParser()
 parser.add_argument("--dynet-seed", default=0, type=int)
 parser.add_argument("--dynet-mem", default=512, type=int)
-parser.add_argument("--dynet-gpus", default=0, type=int)
+parser.add_argument("--dynet-gpu", help="Use dynet with GPU", action="store_true")
 parser.add_argument("--config_file", '-c',
                     default=None, type=str)
 parser.add_argument("--env", '-e',
@@ -91,7 +91,7 @@ parser.add_argument("--test",
                     action="store_true")
 
 
-def get_options():
+def parse_options():
     """Get options from commanf line arguments and optionally config file
     
     Returns:
@@ -112,7 +112,15 @@ def get_options():
                         continue
                 else:
                     arg_dict[key] = value
-
+    if opt.dynet_gpu and '--dynet-gpus' not in sys.argv:
+        sys.argv.append('--dynet-gpus')
+        sys.argv.append('1')
+    if '--dynet-mem' not in sys.argv:
+        sys.argv.append('--dynet-mem')
+        sys.argv.append(str(opt.__dict__['dynet_mem']))
+    if '--dynet-seed' not in sys.argv:
+        sys.argv.append('--dynet-seed')
+        sys.argv.append(str(opt.__dict__['dynet_seed']))
     return opt
 
 
@@ -131,3 +139,8 @@ def print_config(opt, **kwargs):
     for k, v in kwargs.items():
         print(k, ':', v)
     print('======================')
+
+options = parse_options()
+
+def get_options():
+    return options

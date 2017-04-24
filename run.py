@@ -4,12 +4,13 @@ import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
+import options
+
 import numpy as np
 import dynet as dy
 import time
 
 import data
-import options
 import seq2seq
 import evaluation
 
