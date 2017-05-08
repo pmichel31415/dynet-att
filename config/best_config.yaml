@@ -9,7 +9,8 @@ att_dim : 256
 emb_dim : 512
 hidden_dim : 512
 max_len : 80
-dropout_rate : 0.5
+dropout_rate : 0.4
+word_dropout_rate : 0.1
 gradient_clip: 1.0
 trainer: adam
 train:
@@ -18,9 +19,9 @@ train:
   train_src : en-de/train.en-de.low.filt.de
   valid_src : en-de/valid.en-de.low.de
   valid_dst : en-de/valid.en-de.low.en
-  valid_out : output/valid.de-en.en
   num_epochs : 10
   batch_size : 32
+  patience : 2
   dev_batch_size : 10
   check_train_error_every : 100
   check_valid_error_every : 2500
@@ -29,13 +30,9 @@ train:
   learning_rate_decay : 0.0
   beam_size : 3
   src_vocab_size : 40000
-  trg_vocab_size : 20000
+  trg_vocab_size : 40000
 test:
   test : True
   test_src : en-de/test.en-de.low.de
   test_dst : en-de/test.en-de.low.en
-  test_out : output/test.en-de.en
-  dic_src : test_src_dic.txt
-  dic_dst : test_trg_dic.txt
   beam_size : 5
-  model : best_model

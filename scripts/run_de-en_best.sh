@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --mem=10g
 #SBATCH -t 0
-#SBATCH -o results/log_de-en_medium.txt
+#SBATCH -o output/log_de-en_best.txt
 source ~/.bashrc
 # Training
 python run.py -c config/best_config.yaml -e train
