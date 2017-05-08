@@ -10,15 +10,16 @@ emb_dim : 64
 hidden_dim : 64
 max_len : 10
 dropout_rate : 0.5
+word_dropout_rate : 0.2
 gradient_clip: 1.0
 trainer: sgd
+output_dir : output
 train:
   train : True
   train_dst : en-de/train.en-de.low.filt.en
   train_src : en-de/train.en-de.low.filt.de
   valid_src : en-de/valid.en-de.low.de
   valid_dst : en-de/valid.en-de.low.en
-  valid_out : output/out.en-de.en
   num_epochs : 1
   batch_size : 5
   dev_batch_size : 5
@@ -32,8 +33,4 @@ test:
   test : True
   test_src : en-de/valid.en-de.low.de
   test_dst : en-de/valid.en-de.low.en
-  test_out : output/out.en-de.en
-  dic_src : test_src_dic.txt
-  dic_dst : test_trg_dic.txt
   beam_size : 2
-  model : test_model

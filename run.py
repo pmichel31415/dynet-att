@@ -23,13 +23,13 @@ def train(opt):
     if opt.dic_src:
         widss, ids2ws = data.load_dic(opt.dic_src)
     else:
-        widss, ids2ws = data.read_dic(opt.train_src, max_size=opt.src_vocab_size)
+        widss, ids2ws = data.read_dic(opt.train_src, max_size=opt.src_vocab_size, min_freq=opt.min_freq)
         data.save_dic(opt.exp_name + '_src_dic.txt', widss)
 
     if opt.dic_dst:
         widst, ids2wt = data.load_dic(opt.dic_dst)
     else:
-        widst, ids2wt = data.read_dic(opt.train_dst, max_size=opt.trg_vocab_size)
+        widst, ids2wt = data.read_dic(opt.train_dst, max_size=opt.trg_vocab_size, min_freq=opt.min_freq)
         data.save_dic(opt.exp_name + '_trg_dic.txt', widst)
 
     # Read training
@@ -38,12 +38,16 @@ def train(opt):
     # Read validation
     valids_data = data.read_corpus(opt.valid_src, widss)
     validt_data = data.read_corpus(opt.valid_dst, widst)
-
+    # Validation output
+    if not opt.valid_out:
+        opt.valid_out = opt.output_dir + '/' + opt.exp_name + '.valid.out'
+    
     # Create model ======================================================
     if opt.verbose:
         print('Creating model')
         sys.stdout.flush()
-    s2s = seq2seq.Seq2SeqModel(opt.emb_dim,
+    s2s = seq2seq.Seq2SeqModel(opt.num_layers,
+                               opt.emb_dim,
                                opt.hidden_dim,
                                opt.att_dim,
                                widss,
@@ -52,6 +56,7 @@ def train(opt):
                                bidir=opt.bidir,
                                word_emb=opt.word_emb,
                                dropout=opt.dropout_rate,
+                               word_dropout=opt.word_dropout_rate,
                                max_len=opt.max_len)
 
     if s2s.model_file is not None:
@@ -62,7 +67,7 @@ def train(opt):
         trainer = dy.SimpleSGDTrainer(
             s2s.model, e0=opt.learning_rate, edecay=opt.learning_rate_decay)
     if opt.trainer == 'clr':
-        trainer = dy.CyclicalSGDTrainer(s2s.model, e0_min=opt.learning_rate / 10,
+        trainer = dy.CyclicalSGDTrainer(s2s.model, e0_min=opt.learning_rate / 10.0,
                                         e0_max=opt.learning_rate, edecay=opt.learning_rate_decay)
     elif opt.trainer == 'momentum':
         trainer = dy.MomentumSGDTrainer(
@@ -96,7 +101,8 @@ def train(opt):
     start = time.time()
     train_loss = 0
     processed = 0
-    best_bleu = 0
+    best_bleu = -1
+    deadline = 0
     i = 0
     for epoch in range(opt.num_epochs):
         for x, y in trainbatchloader:
@@ -157,6 +163,11 @@ def train(opt):
                     best_bleu = bleu
                     print('Best BLEU score up to date, saving model to', s2s.model_file)
                     s2s.save()
+                    deadline = 0
+                else:
+                    deadline += 1
+                if opt.patience > 0 and deadline > opt.patience:
+                    print('No improvement since',deadline,'epochs, early stopping with best validation BLEU score:', best_bleu)
                 sys.stdout.flush()
                 start = time.time()
             i = i+1
@@ -170,22 +181,30 @@ def test(opt):
     # Read vocabs
     if opt.dic_src:
         widss, ids2ws = data.load_dic(opt.dic_src)
-    else:
-        widss, ids2ws = data.read_dic(opt.train_src, max_size=opt.src_vocab_size)
+    elif opt.train_src:
+        widss, ids2ws = data.read_dic(opt.train_src, max_size=opt.src_vocab_size, min_freq=opt.min_freq)
         data.save_dic(opt.exp_name + '_src_dic.txt', widss)
+    else:
+        widss, ids2ws = data.load_dic(opt.exp_name + '_src_dic.txt')
 
     if opt.dic_dst:
         widst, ids2wt = data.load_dic(opt.dic_dst)
-    else:
-        widst, ids2wt = data.read_dic(opt.train_dst, max_size=opt.trg_vocab_size)
+    elif opt.train_dst:
+        widst, ids2wt = data.read_dic(opt.train_dst, max_size=opt.trg_vocab_size, min_freq=opt.min_freq)
         data.save_dic(opt.exp_name + '_trg_dic.txt', widst)
+    else:
+        widst, ids2wt = data.load_dic(opt.exp_name + '_trg_dic.txt')
     # Read test
     tests_data = data.read_corpus(opt.test_src, widss)
+    # Test output
+    if not opt.test_out:
+        opt.test_out = opt.output_dir + '/' + opt.exp_name + '.test.out'
     # Create model ======================================================
     if opt.verbose:
         print('Creating model')
         sys.stdout.flush()
-    s2s = seq2seq.Seq2SeqModel(opt.emb_dim,
+    s2s = seq2seq.Seq2SeqModel(opt.num_layers,
+                               opt.emb_dim,
                                opt.hidden_dim,
                                opt.att_dim,
                                widss,
@@ -196,9 +215,9 @@ def test(opt):
                                dropout=opt.dropout_rate,
                                max_len=opt.max_len)
 
-    if s2s.model_file is not None:
-        s2s.load()
-    s2s.model_file = opt.exp_name + '_model'
+    if s2s.model_file is None:
+        s2s.model_file = opt.exp_name + '_model.txt'
+    s2s.load()
     # Print configuration ===============================================
     if opt.verbose:
         options.print_config(opt, src_dict_size=len(widss), trg_dict_size=len(widst))

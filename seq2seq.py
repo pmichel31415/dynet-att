@@ -5,6 +5,7 @@ reload(sys)
 sys.setdefaultencoding("utf-8")
 
 import numpy as np
+import numpy.random as npr
 import dynet as dy
 
 class Seq2SeqModel(object):
@@ -16,6 +17,7 @@ class Seq2SeqModel(object):
         object
     """
     def __init__(self,
+                 num_layers,
                  input_dim,
                  hidden_dim,
                  att_dim,
@@ -25,6 +27,7 @@ class Seq2SeqModel(object):
                  bidir=False,
                  word_emb=False,
                  dropout=0.0,
+                 word_dropout=0.0,
                  max_len=60):
         """Constructor
         
@@ -45,7 +48,8 @@ class Seq2SeqModel(object):
         # Store config
         self.bidir = bidir
         self.word_emb = word_emb
-        self.dr = dropout
+        self.nl = num_layers
+        self.dr, self.wdr = dropout, word_dropout
         self.max_len = max_len
         self.src_sos, self.src_eos = src_dic['SOS'], src_dic['EOS']
         self.trg_sos, self.trg_eos = trg_dic['SOS'], trg_dic['EOS']
@@ -63,9 +67,9 @@ class Seq2SeqModel(object):
         self.model = dy.Model()
         self.model_file = model_file
         # RNN parameters
-        self.enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, self.model)
-        self.rev_enc = dy.VanillaLSTMBuilder(1, self.di, self.dh, self.model)
-        self.dec = dy.VanillaLSTMBuilder(1, self.dec_dim, self.dh, self.model)
+        self.enc = dy.VanillaLSTMBuilder(self.nl, self.di, self.dh, self.model)
+        self.rev_enc = dy.VanillaLSTMBuilder(self.nl, self.di, self.dh, self.model)
+        self.dec = dy.VanillaLSTMBuilder(self.nl, self.dec_dim, self.dh, self.model)
         # State passing parameters
         self.Wp_p = self.model.add_parameters((self.dh, self.enc_dim))
         self.bp_p = self.model.add_parameters((self.dh,), init=dy.ConstInitializer(0))
@@ -115,6 +119,16 @@ class Seq2SeqModel(object):
             x[:, i] = sent
         return x, masks
 
+    def drop_words(self, x, test):
+        _, bs = x.dim()
+        if not test:
+            mask = np.ones((self.di, bs)) / (1.0 - self.wdr)
+            mask[:, npr.rand(bs) <= self.wdr] = 0
+            mask = dy.inputTensor(mask, batched=True)
+            return dy.cmult(x, mask)
+        else:
+            return x
+
     def encode(self, src, test=False):
         """Encode a batch of sentences
         
@@ -129,15 +143,27 @@ class Seq2SeqModel(object):
         """
         # Prepare batch
         x, _ = self.prepare_batch(src, self.src_eos)
+        if not test:
+            self.enc.set_dropout(self.dr)
+        else:
+            self.enc.disable_dropout()
         # Add encoder to computation graph
         es = self.enc.initial_state()
+        if not test:
+            self.enc.set_dropout_masks(len(x[0]))
         # Embed words
-        wembs = [dy.lookup_batch(self.MS_p, iw) for iw in x]
+        wembs = [self.drop_words(dy.lookup_batch(self.MS_p, iw), test) for iw in x]
         # Encode sentence
         encoded_states = es.transduce(wembs)
         # Use bidirectional encoder
         if self.bidir:
+            if not test:
+                self.rev_enc.set_dropout(self.dr)
+            else:
+                self.rev_enc.disable_dropout()
             res = self.rev_enc.initial_state()
+            if not test:
+                self.rev_enc.set_dropout_masks(len(x[0]))
             rev_encoded_states = res.transduce(wembs[::-1])[::-1]
         # Create encoding matrix
         H = dy.concatenate_cols(encoded_states)
@@ -196,15 +222,21 @@ class Seq2SeqModel(object):
         Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
         D, b = dy.transpose(dy.parameter(self.MT_p)), self.b_p.expr()
         # Initialize decoder with last encoding
+        if not test:
+            self.dec.set_dropout(self.dr)
+        else:
+            self.dec.disable_dropout()
         last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
         init_state = dy.affine_transform([bp, Wp, last_enc])
         ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,), batch_size=bsize)])
+        if not test:
+            self.dec.set_dropout_masks(len(y[0]))
         # Initialize context
         context = dy.zeroes((self.enc_dim,), batch_size=bsize)
         # Start decoding
         errs = []
         for cw, nw, mask in zip(y, y[1:], masksy[1:]):
-            embs = dy.lookup_batch(self.MT_p, cw)
+            embs = self.drop_words(dy.lookup_batch(self.MT_p, cw), test)
             # Run LSTM
             ds = ds.add_input(dy.concatenate([embs, context]))
             h = ds.output()
@@ -267,6 +299,7 @@ class Seq2SeqModel(object):
         Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
         D, b = dy.transpose(dy.parameter(self.MT_p)), self.b_p.expr()
         # Initialize decoder with last encoding
+        self.dec.disable_dropout()
         last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
         init_state = dy.affine_transform([bp, Wp, last_enc])
         ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,))])
