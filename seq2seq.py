@@ -79,7 +79,7 @@ class Seq2SeqModel(object):
         self.Wha_p = self.model.add_parameters((self.da, self.dh))
         # Embedding parameters
         self.MS_p = self.model.add_lookup_parameters((self.vs, self.di))
-        self.MT_p = self.model.add_lookup_parameters((self.vt, self.di))
+        self.MT_p = self.model.add_parameters((self.vt, self.di))
         # Output parameters
         self.Wo_p = self.model.add_parameters((self.di, self.out_dim))
         self.bo_p = self.model.add_parameters((self.di,), init=dy.ConstInitializer(0))
@@ -220,7 +220,7 @@ class Seq2SeqModel(object):
         # Add parameters to the graph
         Wp, bp = self.Wp_p.expr(), self.bp_p.expr()
         Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
-        D, b = dy.transpose(dy.parameter(self.MT_p)), self.b_p.expr()
+        D, b = dy.parameter(self.MT_p), self.b_p.expr()
         # Initialize decoder with last encoding
         if not test:
             self.dec.set_dropout(self.dr)
@@ -236,7 +236,7 @@ class Seq2SeqModel(object):
         # Start decoding
         errs = []
         for cw, nw, mask in zip(y, y[1:], masksy[1:]):
-            embs = self.drop_words(dy.lookup_batch(self.MT_p, cw), test)
+            embs = self.drop_words(dy.pick_batch(D, cw), test)
             # Run LSTM
             ds = ds.add_input(dy.concatenate([embs, context]))
             h = ds.output()
@@ -297,7 +297,7 @@ class Seq2SeqModel(object):
         # Add parameters to the graph
         Wp, bp = self.Wp_p.expr(), self.bp_p.expr()
         Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
-        D, b = dy.transpose(dy.parameter(self.MT_p)), self.b_p.expr()
+        D, b = dy.parameter(self.MT_p), self.b_p.expr()
         # Initialize decoder with last encoding
         self.dec.disable_dropout()
         last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
@@ -311,7 +311,7 @@ class Seq2SeqModel(object):
         for i in range(int(min(self.max_len, input_len * 1.5))):
             new_beam = []
             for ds, pc, pw, logprob in beam:
-                embs = dy.lookup(self.MT_p, pw[-1])
+                embs = dy.pick(D, pw[-1])
                 # Run LSTM
                 ds = ds.add_input(dy.concatenate([embs, pc]))
                 h = ds.output()
