@@ -16,32 +16,24 @@ parser.add_argument("--config_file", '-c',
                     default=None, type=str)
 parser.add_argument("--env", '-e', help="Environment in the config file",
                     default='train', type=str)
-parser.add_argument("--train_src", '-ts', help="Train data in the source language",
-                    default='en-de/train.en-de.de', type=str)
-parser.add_argument("--train_dst", '-td', help="Train data in the target language",
-                    default='en-de/train.en-de.en', type=str)
-parser.add_argument("--valid_src", '-vs', help="Validation data in the source language",
-                    default='en-de/valid.en-de.de', type=str)
-parser.add_argument("--valid_dst", '-vd', help="Validation data in the target language",
-                    default='en-de/valid.en-de.en', type=str)
-parser.add_argument("--test_src", '-tes', help="Test data in the source language",
-                    default='en-de/test.en-de.de', type=str)
-parser.add_argument("--test_dst", '-ted', help="Test data in the target language",
-                    default='en-de/test.en-de.en', type=str)
-parser.add_argument("--dic_src", '-dis', help="File to save the source language dictionary to",
-                    default=None, type=str)
-parser.add_argument("--dic_dst", '-did', help="File to save the target language dictionary to",
-                    default=None, type=str)
-parser.add_argument("--test_out", '-teo', help="File to save the translated test data",
-                    default='results/test.out.en-de.en', type=str)
-parser.add_argument("--valid_out", '-vo', help="File to save the translated validation data",
-                    default='results/valid.out.en-de.en', type=str)
-parser.add_argument("--model", '-m', type=str,
-                    help='Model file ([exp_name]_model if not specified)')
+parser.add_argument("--output_dir", '-od', help="Output directory", type=str, default='.')
+parser.add_argument("--train_src", '-ts', help="Train data in the source language", type=str)
+parser.add_argument("--train_dst", '-td', help="Train data in the target language", type=str)
+parser.add_argument("--valid_src", '-vs', help="Validation data in the source language", type=str)
+parser.add_argument("--valid_dst", '-vd', help="Validation data in the target language", type=str)
+parser.add_argument("--test_src", '-tes', help="Test data in the source language", type=str)
+parser.add_argument("--test_dst", '-ted', help="Test data in the target language", type=str)
+parser.add_argument("--dic_src", '-dis', help="File to save the source language dictionary to", type=str)
+parser.add_argument("--dic_dst", '-did', help="File to save the target language dictionary to", type=str)
+parser.add_argument("--test_out", '-teo', help="File to save the translated test data", type=str)
+parser.add_argument("--valid_out", '-vo', help="File to save the translated validation data", type=str)
+parser.add_argument("--model", '-m', type=str, help='Model file ([exp_name]_model if not specified)')
 parser.add_argument("--trainer", '-tr', type=str,
                     help='Optimizer. Choose from "sgd,clr,momentum,adam,rmsprop"', default='sgd')
 parser.add_argument('--num_epochs', '-ne', type=int, default=1,
                     help='Number of epochs (full pass over the training data) to train on')
+parser.add_argument('--patience', '-p', type=int, default=0,
+                    help='Patience before early stopping. No early stopping if <= 0')
 parser.add_argument('--src_vocab_size', '-svs',
                     type=int, help='Maximum vocab size of the source language', default=40000)
 parser.add_argument('--trg_vocab_size', '-tvs',
@@ -50,6 +42,8 @@ parser.add_argument('--batch_size', '-bs',
                     type=int, help='minibatch size', default=20)
 parser.add_argument('--dev_batch_size', '-dbs',
                     type=int, help='minibatch size for the validation set', default=10)
+parser.add_argument('--num_layers', '-nl',
+                    type=int, help='Number of layers in the encoder/decoder (For now only one is supported)', default=1)
 parser.add_argument('--emb_dim', '-de',
                     type=int, help='Embedding dimension', default=256)
 parser.add_argument('--att_dim', '-da',
@@ -58,6 +52,8 @@ parser.add_argument('--hidden_dim', '-dh',
                     type=int, help='Hidden dimension (for the recurrent networks)', default=256)
 parser.add_argument('--dropout_rate', '-dr',
                     type=float, help='Dropout rate', default=0.0)
+parser.add_argument('--word_dropout_rate', '-wdr',
+                    type=float, help='Word dropout rate', default=0.0)
 parser.add_argument('--gradient_clip', '-gc', type=float, default=1.0,
                     help='Gradient clipping. Negative value means no clipping')
 parser.add_argument('--learning_rate', '-lr',
@@ -74,6 +70,8 @@ parser.add_argument('--max_len', '-ml', type=int,
                     help='Maximum length of generated sentences', default=60)
 parser.add_argument('--beam_size', '-bm', type=int,
                     help='Beam size for beam search', default=1)
+parser.add_argument('--min_freq', '-mf', type=int,
+                    help='Minimum frequency under which words are unked', default=1)
 parser.add_argument("--exp_name", '-en', type=str, default='experiment',
                     help='Name of the experiment (used so save the model)')
 parser.add_argument("--bidir", '-bid',
