@@ -168,6 +168,7 @@ def train(opt):
                     deadline += 1
                 if opt.patience > 0 and deadline > opt.patience:
                     print('No improvement since',deadline,'epochs, early stopping with best validation BLEU score:', best_bleu)
+                    exit()
                 sys.stdout.flush()
                 start = time.time()
             i = i+1
