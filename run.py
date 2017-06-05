@@ -196,7 +196,8 @@ def test(opt):
     else:
         widst, ids2wt = data.load_dic(opt.exp_name + '_trg_dic.txt')
     # Read test
-    tests_data = data.read_corpus(opt.test_src, widss)
+    tests_data = np.asarray(data.read_corpus(opt.test_src, widss), dtype=list)
+    testd_data = np.asarray(data.read_corpus(opt.test_dst, widst), dtype=list)
     # Test output
     if not opt.test_out:
         opt.test_out = opt.output_dir + '/' + opt.exp_name + '.test.out'
@@ -227,16 +228,30 @@ def test(opt):
     print('Start running on test set, buckle up!')
     sys.stdout.flush()
     test_start = time.time()
-    with open(opt.test_out, 'w+') as of:
-        for x in tests_data:
+
+    bleus = []
+    for k in range(opt.bootstrap_number):
+        test_start = time.time()
+        gold_file = opt.test_out[:-4] + '_gold.txt'
+        hyp_file = opt.test_out
+        subset = np.random.choice(len(tests_data), int(opt.bootstrap_size * len(tests_data) / 100.0)).astype(int)
+        gold = []
+        translations = []
+        for i, x in enumerate(tests_data[subset]):
             y = s2s.translate(x, beam_size=opt.beam_size)
-            translation = ' '.join([ids2wt[w] for w in y[1:-1]])
-            of.write(translation+'\n')
-    _, details = evaluation.bleu_score(opt.test_dst, opt.test_out)
-    test_elapsed = time.time()-test_start
-    print('Finished running on test set', test_elapsed, 'elapsed.')
-    print(details)
-    sys.stdout.flush()
+            translations.append(' '.join([ids2wt[w] for w in y[1:-1]]))
+            gold.append(' '.join([ids2wt[w] for w in testd_data[subset[i]][1:-1]]))
+        np.savetxt(hyp_file, translations, fmt='%s')
+        np.savetxt(gold_file, gold, fmt='%s')
+        BLEU, details = evaluation.bleu_score(gold_file, hyp_file)
+        bleus.append(BLEU)
+        test_elapsed = time.time()-test_start
+        print('Finished running on test set', test_elapsed, 'elapsed.')
+        print(details)
+        sys.stdout.flush()
+    print('Confidence interval 5%% - 95%% : %3.f - %3.f' % (np.percentile(bleus, 5),np.percentile(bleus, 5)))
+    np.savetxt(opt.output_dir + '/bleus_' + opt.exp_name + '.txt', bleus)
+
 
 
 if __name__ == '__main__':

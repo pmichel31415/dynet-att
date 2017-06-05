@@ -115,7 +115,6 @@ def read_corpus(file, dic):
             sentences.append(sent)
     return sentences
 
-
 class BatchLoader(object):
     """Iterator used to load batches
     

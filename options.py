@@ -70,6 +70,10 @@ parser.add_argument('--max_len', '-ml', type=int,
                     help='Maximum length of generated sentences', default=60)
 parser.add_argument('--beam_size', '-bm', type=int,
                     help='Beam size for beam search', default=1)
+parser.add_argument('--bootstrap_number', '-bootn', type=int,
+                    help='Number of samples for bootstrap', default=10)
+parser.add_argument('--bootstrap_size', '-boots', type=int,
+                    help='Size of subsets for bootstrap (in percentage)', default=50)
 parser.add_argument('--min_freq', '-mf', type=int,
                     help='Minimum frequency under which words are unked', default=1)
 parser.add_argument("--exp_name", '-en', type=str, default='experiment',
