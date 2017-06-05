@@ -253,7 +253,7 @@ def test(opt):
         bleus.append(BLEU)
         print(details)
         sys.stdout.flush()
-    print('Confidence interval 5%% - 95%% : %3.f - %3.f' % (np.percentile(bleus, 5),np.percentile(bleus, 5)))
+    print('Confidence interval 5%% - 95%% : %.3f - %.3f' % (np.percentile(bleus, 5),np.percentile(bleus, 5)))
     np.savetxt(opt.output_dir + '/bleus_' + opt.exp_name + '.txt', bleus)
 
 
