@@ -234,7 +234,10 @@ def test(opt):
         test_start = time.time()
         gold_file = opt.test_out[:-4] + '_gold.txt'
         hyp_file = opt.test_out
-        subset = np.random.choice(len(tests_data), int(opt.bootstrap_size * len(tests_data) / 100.0)).astype(int)
+        if opt.bootstrap_size < 100:
+            subset = np.random.choice(len(tests_data), int(opt.bootstrap_size * len(tests_data) / 100.0)).astype(int)
+        else:
+            subset = np.arange(len(tests_data), dtype=int)
         gold = []
         translations = []
         for i, x in enumerate(tests_data[subset]):
