@@ -120,12 +120,8 @@ class Seq2SeqModel(object):
         return x, masks
 
     def drop_words(self, x, test):
-        _, bs = x.dim()
         if not test:
-            mask = np.ones((self.di, bs)) / (1.0 - self.wdr)
-            mask[:, npr.rand(bs) <= self.wdr] = 0
-            mask = dy.inputTensor(mask, batched=True)
-            return dy.cmult(x, mask)
+            return dy.dropout_dim(x,0, self.wdr)
         else:
             return x
 
@@ -152,7 +148,7 @@ class Seq2SeqModel(object):
         if not test:
             self.enc.set_dropout_masks(len(x[0]))
         # Embed words
-        wembs = [self.drop_words(dy.lookup_batch(self.MS_p, iw), test) for iw in x]
+        wembs = [dy.lookup_batch(self.MS_p, iw) for iw in x]
         # Encode sentence
         encoded_states = es.transduce(wembs)
         # Use bidirectional encoder
@@ -226,7 +222,8 @@ class Seq2SeqModel(object):
             self.dec.set_dropout(self.dr)
         else:
             self.dec.disable_dropout()
-        last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
+        last_enc = dy.concatenate([dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])[:self.dh], dy.select_cols(encodings, [0])[self.dh:]])
+
         init_state = dy.affine_transform([bp, Wp, last_enc])
         ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,), batch_size=bsize)])
         if not test:
@@ -300,7 +297,7 @@ class Seq2SeqModel(object):
         D, b = dy.parameter(self.MT_p), self.b_p.expr()
         # Initialize decoder with last encoding
         self.dec.disable_dropout()
-        last_enc = dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])
+        last_enc = dy.concatenate([dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])[:self.dh], dy.select_cols(encodings, [0])[self.dh:]])
         init_state = dy.affine_transform([bp, Wp, last_enc])
         ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,))])
         # Initialize context
