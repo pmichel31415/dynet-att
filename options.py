@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--dynet-seed", default=0, type=int)
 parser.add_argument("--dynet-mem", default=512, type=int)
 parser.add_argument("--dynet-gpu", help="Use dynet with GPU", action="store_true")
+parser.add_argument("--dynet-autobatch", default=0, type=int, help="Use dynet autobatching")
 parser.add_argument("--config_file", '-c',
                     default=None, type=str)
 parser.add_argument("--env", '-e', help="Environment in the config file",
@@ -50,6 +51,8 @@ parser.add_argument('--att_dim', '-da',
                     type=int, help='Attention dimension', default=256)
 parser.add_argument('--hidden_dim', '-dh',
                     type=int, help='Hidden dimension (for the recurrent networks)', default=256)
+parser.add_argument('--label_smoothing', '-ls',
+                    type=float, help='Label smoothing (interpolation coefficient with the unifrm distribution)', default=0.0)
 parser.add_argument('--dropout_rate', '-dr',
                     type=float, help='Dropout rate', default=0.0)
 parser.add_argument('--word_dropout_rate', '-wdr',
@@ -93,6 +96,9 @@ parser.add_argument("--train",
 parser.add_argument("--test",
                     help="Print debugging info",
                     action="store_true")
+parser.add_argument("--retranslate",
+                    help="Whether to retranslate the test data (true by default)",
+                    action="store_false")
 
 
 def parse_options():
@@ -122,12 +128,17 @@ def parse_options():
     if opt.dynet_gpu and '--dynet-gpus' not in sys.argv:
         sys.argv.append('--dynet-gpus')
         sys.argv.append('1')
+    if '--dynet-autobatch' not in sys.argv:
+        sys.argv.append('--dynet-autobatch')
+        sys.argv.append(str(opt.__dict__['dynet_autobatch']))
     if '--dynet-mem' not in sys.argv:
         sys.argv.append('--dynet-mem')
         sys.argv.append(str(opt.__dict__['dynet_mem']))
     if '--dynet-seed' not in sys.argv:
         sys.argv.append('--dynet-seed')
         sys.argv.append(str(opt.__dict__['dynet_seed']))
+        if opt.__dict__['dynet_seed']>0:
+            np.random.seed(opt.__dict__['dynet_seed'])
     return opt
 
 

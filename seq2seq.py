@@ -26,6 +26,7 @@ class Seq2SeqModel(object):
                  model_file=None,
                  bidir=False,
                  word_emb=False,
+                 label_smoothing=0.0,
                  dropout=0.0,
                  word_dropout=0.0,
                  max_len=60):
@@ -50,6 +51,7 @@ class Seq2SeqModel(object):
         self.word_emb = word_emb
         self.nl = num_layers
         self.dr, self.wdr = dropout, word_dropout
+        self.ls, self.ls_eps = (label_smoothing > 0), label_smoothing
         self.max_len = max_len
         self.src_sos, self.src_eos = src_dic['SOS'], src_dic['EOS']
         self.trg_sos, self.trg_eos = trg_dic['SOS'], trg_dic['EOS']
@@ -72,7 +74,7 @@ class Seq2SeqModel(object):
         self.dec = dy.VanillaLSTMBuilder(self.nl, self.dec_dim, self.dh, self.model)
         # State passing parameters
         self.Wp_p = self.model.add_parameters((self.dh, self.enc_dim))
-        self.bp_p = self.model.add_parameters((self.dh,), init=dy.ConstInitializer(0))
+        self.bp_p = self.model.add_parameters((self.dh,))
         # Attention parameters
         self.Va_p = self.model.add_parameters((self.da))
         self.Wa_p = self.model.add_parameters((self.da, self.enc_dim))
@@ -81,8 +83,8 @@ class Seq2SeqModel(object):
         self.MS_p = self.model.add_lookup_parameters((self.vs, self.di))
         self.MT_p = self.model.add_parameters((self.vt, self.di))
         # Output parameters
-        self.Wo_p = self.model.add_parameters((self.di, self.out_dim))
-        self.bo_p = self.model.add_parameters((self.di,), init=dy.ConstInitializer(0))
+        self.Wo_p = self.model.add_parameters((self.di, self.out_dim), dy.UniformInitializer(np.sqrt(6/(self.di+self.out_dim))))
+        self.bo_p = self.model.add_parameters((self.di,), init=dy.UniformInitializer(np.sqrt(3/self.di)))
         # Softmax parameters
         self.b_p = self.model.add_parameters((self.vt,), init=dy.ConstInitializer(0))
 
@@ -222,7 +224,7 @@ class Seq2SeqModel(object):
             self.dec.set_dropout(self.dr)
         else:
             self.dec.disable_dropout()
-        last_enc = dy.concatenate([dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])[:self.dh], dy.select_cols(encodings, [0])[self.dh:]])
+        last_enc = dy.pick(encodings, index=encodings.dim()[0][-1] - 1, dim=1)
 
         init_state = dy.affine_transform([bp, Wp, last_enc])
         ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,), batch_size=bsize)])
@@ -247,7 +249,12 @@ class Seq2SeqModel(object):
             s = dy.affine_transform([b, D, output])
             masksy_e = dy.inputTensor(mask, batched=True)
             # Loss
-            err = dy.cmult(dy.pickneglogsoftmax_batch(s, nw), masksy_e)
+            if self.ls:
+                log_prob = dy.log_softmax(s)
+                err = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - dy.mean_elems(log_prob) * self.ls_eps
+            else:
+                err = dy.pickneglogsoftmax(s, nw)
+            err = dy.cmult(err, masksy_e)
             errs.append(err)
         # Add all losses together
         err = dy.sum_batches(dy.esum(errs)) / float(bsize)
@@ -297,7 +304,7 @@ class Seq2SeqModel(object):
         D, b = dy.parameter(self.MT_p), self.b_p.expr()
         # Initialize decoder with last encoding
         self.dec.disable_dropout()
-        last_enc = dy.concatenate([dy.select_cols(encodings, [encodings.dim()[0][-1] - 1])[:self.dh], dy.select_cols(encodings, [0])[self.dh:]])
+        last_enc = dy.pick(encodings, index=encodings.dim()[0][-1] - 1, dim=1)
         init_state = dy.affine_transform([bp, Wp, last_enc])
         ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,))])
         # Initialize context

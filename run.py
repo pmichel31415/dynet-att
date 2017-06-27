@@ -55,6 +55,7 @@ def train(opt):
                                model_file=opt.model,
                                bidir=opt.bidir,
                                word_emb=opt.word_emb,
+                               label_smoothing=opt.label_smoothing,
                                dropout=opt.dropout_rate,
                                word_dropout=opt.word_dropout_rate,
                                max_len=opt.max_len)
@@ -213,6 +214,7 @@ def test(opt):
                                model_file=opt.model,
                                bidir=opt.bidir,
                                word_emb=opt.word_emb,
+                               label_smoothing=opt.label_smoothing,
                                dropout=opt.dropout_rate,
                                max_len=opt.max_len)
 
@@ -227,11 +229,15 @@ def test(opt):
     print('Start running on test set, buckle up!')
     sys.stdout.flush()
     test_start = time.time()
-    translations = []
-    for i, x in enumerate(tests_data):
-        y = s2s.translate(x, beam_size=opt.beam_size)
-        translations.append(' '.join([ids2wt[w] for w in y[1:-1]]))
-    np.savetxt(opt.test_out, translations, fmt='%s')
+    if opt.retranslate:
+        translations = []
+        for i, x in enumerate(tests_data):
+            y = s2s.translate(x, beam_size=opt.beam_size)
+            translations.append(' '.join([ids2wt[w] for w in y[1:-1]]))
+        np.savetxt(opt.test_out, translations, fmt='%s')
+        translations = np.asarray(translations, dtype=str)
+    else:
+        translations = np.loadtxt(opt.test_out, dtype=str, delimiter='\n')
     BLEU, details = evaluation.bleu_score(opt.test_dst, opt.test_out)
     test_elapsed = time.time()-test_start
     print('Finished running on test set', test_elapsed, 'elapsed.')
@@ -240,7 +246,6 @@ def test(opt):
     bleus = []
     gold_file = opt.test_out[:-4] + '_gold.txt'
     hyp_file = opt.test_out[:-4] + '_boot.txt'
-    translations = np.asarray(translations, dtype=str)
     gold = np.loadtxt(opt.test_dst, dtype=str, delimiter='\n')
     for k in range(opt.bootstrap_number):
         if opt.bootstrap_size < 100:
