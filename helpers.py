@@ -1,17 +1,17 @@
 from __future__ import print_function, division
 
-import sys
-reload(sys)
-sys.setdefaultencoding("utf-8")
-
 import time
 
-import numpy as np
 import dynet as dy
 
 import data
 import seq2seq
 import lm
+
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
 
 class Logger(object):
 
@@ -40,8 +40,10 @@ class Timer(object):
         self.restart()
         return elapsed
 
+
 def exp_filename(opt, name):
     return opt.output_dir + '/' + opt.exp_name + '_' + name
+
 
 def build_model(opt, widss, widst, lang_model, test=False):
     s2s = seq2seq.Seq2SeqModel(opt.num_layers,
@@ -68,17 +70,18 @@ def build_model(opt, widss, widst, lang_model, test=False):
         s2s.model_file = exp_filename(opt, 'model')
     return s2s
 
+
 def get_language_model(opt, train_data, w2id, test=False):
     if opt.language_model is None:
-       return None
+        return None
     if opt.language_model == 'uniform':
-       return None
+        return None
     elif opt.language_model == 'unigram':
-       print('Using unigram lm')
-       lang_model = lm.UnigramLanguageModel(w2id)
+        print('Using unigram lm')
+        lang_model = lm.UnigramLanguageModel(w2id)
     else:
-       print('Unknown language model %s, using unigram language model' % opt.language_model)
-       lang_model = lm.UnigramLanguageModel(w2id)
+        print('Unknown language model %s, using unigram language model' % opt.language_model)
+        lang_model = lm.UnigramLanguageModel(w2id)
 
     if opt.lm_file is not None or test:
         if opt.lm_file is None:
@@ -90,6 +93,7 @@ def get_language_model(opt, train_data, w2id, test=False):
         opt.lm_file = exp_filename(opt, 'lm')
         lang_model.save(opt.lm_file)
     return lang_model
+
 
 def get_dictionaries(opt, test=False):
     if opt.dic_src:

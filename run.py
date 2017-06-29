@@ -1,18 +1,17 @@
 from __future__ import print_function, division
 
+import options
+
+import numpy as np
+
+import data
+import evaluation
+import helpers
+
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
-import options
-
-import numpy as np
-import dynet as dy
-
-import data
-import seq2seq
-import evaluation
-import helpers
 
 def train(opt):
     log = helpers.Logger(opt.verbose)
@@ -32,14 +31,14 @@ def train(opt):
     if not opt.valid_out:
         opt.valid_out = helpers.exp_filename(opt, 'valid.out')
     # Get target language model
-    lang_model = helpers.get_language_model(opt, trainingt_data, widst) 
+    lang_model = helpers.get_language_model(opt, trainingt_data, widst)
     # Create model ======================================================
     log.info('Creating model')
     s2s = helpers.build_model(opt, widss, widst, lang_model)
 
     # Trainer ==========================================================
     trainer = helpers.get_trainer(opt, s2s)
-    log.info('Using '+opt.trainer+' optimizer')
+    log.info('Using ' + opt.trainer + ' optimizer')
     # Print configuration ===============================================
     if opt.verbose:
         options.print_config(opt, src_dict_size=len(widss), trg_dict_size=len(widst))
@@ -65,16 +64,16 @@ def train(opt):
             loss.backward()
             trainer.update()
             train_loss += loss.scalar_value() * bsize
-            if (i+1) % opt.check_train_error_every == 0:
+            if (i + 1) % opt.check_train_error_every == 0:
                 # Check average training error from time to time
                 logloss = train_loss / processed
                 ppl = np.exp(logloss)
                 trainer.status()
                 log.info(" Training_loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
-                      (logloss, ppl, timer.tick(), processed))
+                         (logloss, ppl, timer.tick(), processed))
                 train_loss = 0
                 processed = 0
-            if (i+1) % opt.check_valid_error_every == 0:
+            if (i + 1) % opt.check_valid_error_every == 0:
                 # Check generalization error on the validation set from time to time
                 dev_loss = 0
                 dev_processed = 0
@@ -84,12 +83,12 @@ def train(opt):
                     bsize = len(y)
                     loss = s2s.calculate_loss(x, y, test=True)
                     dev_loss += loss.scalar_value() * bsize
-                dev_logloss = dev_loss/dev_processed
+                dev_logloss = dev_loss / dev_processed
                 dev_ppl = np.exp(dev_logloss)
                 log.info("[epoch %d] Dev loss=%f, ppl=%f, time=%f s, tokens processed=%d" %
-                      (epoch, dev_logloss, dev_ppl, timer.tick(), dev_processed))
+                         (epoch, dev_logloss, dev_ppl, timer.tick(), dev_processed))
 
-            if (i+1) % opt.valid_bleu_every == 0:
+            if (i + 1) % opt.valid_bleu_every == 0:
                 # Check BLEU score on the validation set from time to time
                 log.info('Start translating validation set, buckle up!')
                 timer.restart()
@@ -110,7 +109,8 @@ def train(opt):
                 else:
                     deadline += 1
                 if opt.patience > 0 and deadline > opt.patience:
-                    log.info('No improvement since %d epochs, early stopping with best validation BLEU score: %.3f' % (deadline, best_bleu))
+                    log.info('No improvement since %d epochs, early stopping '
+                             'with best validation BLEU score: %.3f' % (deadline, best_bleu))
                     exit()
             i = i + 1
         trainer.update_epoch()
@@ -127,9 +127,9 @@ def test(opt):
     tests_data = np.asarray(data.read_corpus(opt.test_src, widss), dtype=list)
     # Test output
     if not opt.test_out:
-        opt.test_out = helpers.exp_filename(opt,'test.out')
+        opt.test_out = helpers.exp_filename(opt, 'test.out')
     # Get target language model
-    lang_model = helpers.get_language_model(opt, trainingt_data, widst, test=True) 
+    lang_model = helpers.get_language_model(opt, None, widst, test=True)
     # Create model ======================================================
     log.info('Creating model')
     s2s = helpers.build_model(opt, widss, widst, lang_model)
@@ -141,8 +141,8 @@ def test(opt):
     timer.restart()
     translations = []
     for i, x in enumerate(tests_data):
-	y = s2s.translate(x, beam_size=opt.beam_size)
-	translations.append(' '.join([ids2wt[w] for w in y[1:-1]]))
+        y = s2s.translate(x, beam_size=opt.beam_size)
+        translations.append(' '.join([ids2wt[w] for w in y[1:-1]]))
     np.savetxt(opt.test_out, translations, fmt='%s')
     translations = np.asarray(translations, dtype=str)
     BLEU, details = evaluation.bleu_score(opt.test_dst, opt.test_out)

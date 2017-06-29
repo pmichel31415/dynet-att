@@ -1,12 +1,12 @@
 from __future__ import print_function, division
 
-import sys
-reload(sys)
-sys.setdefaultencoding("utf-8")
-
 import numpy as np
 import argparse
 import yaml
+
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dynet-seed", default=0, type=int)
@@ -24,12 +24,16 @@ parser.add_argument("--valid_src", '-vs', help="Validation data in the source la
 parser.add_argument("--valid_dst", '-vd', help="Validation data in the target language", type=str)
 parser.add_argument("--test_src", '-tes', help="Test data in the source language", type=str)
 parser.add_argument("--test_dst", '-ted', help="Test data in the target language", type=str)
-parser.add_argument("--dic_src", '-dis', help="File to save the source language dictionary to", type=str)
-parser.add_argument("--dic_dst", '-did', help="File to save the target language dictionary to", type=str)
+parser.add_argument("--dic_src", '-dis',
+                    help="File to save the source language dictionary to", type=str)
+parser.add_argument("--dic_dst", '-did',
+                    help="File to save the target language dictionary to", type=str)
 parser.add_argument("--test_out", '-teo', help="File to save the translated test data", type=str)
-parser.add_argument("--valid_out", '-vo', help="File to save the translated validation data", type=str)
+parser.add_argument("--valid_out", '-vo',
+                    help="File to save the translated validation data", type=str)
 parser.add_argument("--lm_file", '-lmf', help="File to save the target language model", type=str)
-parser.add_argument("--model", '-m', type=str, help='Model file ([exp_name]_model if not specified)')
+parser.add_argument("--model", '-m', type=str,
+                    help='Model file ([exp_name]_model if not specified)')
 parser.add_argument("--trainer", '-tr', type=str,
                     help='Optimizer. Choose from "sgd,clr,momentum,adam,rmsprop"', default='sgd')
 parser.add_argument('--num_epochs', '-ne', type=int, default=1,
@@ -44,16 +48,17 @@ parser.add_argument('--batch_size', '-bs',
                     type=int, help='minibatch size', default=20)
 parser.add_argument('--dev_batch_size', '-dbs',
                     type=int, help='minibatch size for the validation set', default=10)
-parser.add_argument('--num_layers', '-nl',
-                    type=int, help='Number of layers in the encoder/decoder (For now only one is supported)', default=1)
+parser.add_argument('--num_layers', '-nl', type=int, default=1,
+                    help='Number of layers in the encoder/decoder (For now only one is supported)')
 parser.add_argument('--emb_dim', '-de',
                     type=int, help='Embedding dimension', default=256)
 parser.add_argument('--att_dim', '-da',
                     type=int, help='Attention dimension', default=256)
 parser.add_argument('--hidden_dim', '-dh',
                     type=int, help='Hidden dimension (for the recurrent networks)', default=256)
-parser.add_argument('--label_smoothing', '-ls',
-                    type=float, help='Label smoothing (interpolation coefficient with the unifrm distribution)', default=0.0)
+parser.add_argument('--label_smoothing', '-ls', type=float, default=0.0,
+                    help='Label smoothing (interpolation coefficient with '
+                    'the uniform distribution)')
 parser.add_argument('--language_model', '-lm',
                     type=str, help='Language model to interpolate with', default=None)
 parser.add_argument('--dropout_rate', '-dr',
@@ -109,7 +114,7 @@ def parse_options():
 
     Returns:
         Options
-        argparse.Namespace 
+        argparse.Namespace
     """
     opt = parser.parse_args()
     if opt.config_file:
@@ -140,7 +145,7 @@ def parse_options():
     if '--dynet-seed' not in sys.argv:
         sys.argv.append('--dynet-seed')
         sys.argv.append(str(opt.__dict__['dynet_seed']))
-        if opt.__dict__['dynet_seed']>0:
+        if opt.__dict__['dynet_seed'] > 0:
             np.random.seed(opt.__dict__['dynet_seed'])
     return opt
 
@@ -161,6 +166,7 @@ def print_config(opt, **kwargs):
         print(k, ':', v)
     print('======================')
 
+
 # Do this so sys.argv is changed upon import
 options = parse_options()
 
@@ -170,6 +176,6 @@ def get_options():
 
     Returns:
         Options
-        argparse.Namespace 
+        argparse.Namespace
     """
     return options
