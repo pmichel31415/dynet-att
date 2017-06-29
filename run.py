@@ -30,7 +30,7 @@ def train(opt):
     validt_data = data.read_corpus(opt.valid_dst, widst)
     # Validation output
     if not opt.valid_out:
-        opt.valid_out = opt.output_dir + '/' + opt.exp_name + '.valid.out'
+        opt.valid_out = helpers.exp_filename(opt, 'valid.out')
     # Get target language model
     lang_model = helpers.get_language_model(opt, trainingt_data, widst) 
     # Create model ======================================================
@@ -104,13 +104,13 @@ def train(opt):
                 # Early stopping : save the latest best model
                 if bleu > best_bleu:
                     best_bleu = bleu
-                    log.info('Best BLEU score up to date, saving model to', s2s.model_file)
+                    log.info('Best BLEU score up to date, saving model to %s' % s2s.model_file)
                     s2s.save()
                     deadline = 0
                 else:
                     deadline += 1
                 if opt.patience > 0 and deadline > opt.patience:
-                    log.info('No improvement since',deadline,'epochs, early stopping with best validation BLEU score:', best_bleu)
+                    log.info('No improvement since %d epochs, early stopping with best validation BLEU score: %.3f' % (deadline, best_bleu))
                     exit()
             i = i + 1
         trainer.update_epoch()
