@@ -28,6 +28,7 @@ parser.add_argument("--dic_src", '-dis', help="File to save the source language 
 parser.add_argument("--dic_dst", '-did', help="File to save the target language dictionary to", type=str)
 parser.add_argument("--test_out", '-teo', help="File to save the translated test data", type=str)
 parser.add_argument("--valid_out", '-vo', help="File to save the translated validation data", type=str)
+parser.add_argument("--lm_file", '-lmf', help="File to save the target language model", type=str)
 parser.add_argument("--model", '-m', type=str, help='Model file ([exp_name]_model if not specified)')
 parser.add_argument("--trainer", '-tr', type=str,
                     help='Optimizer. Choose from "sgd,clr,momentum,adam,rmsprop"', default='sgd')
@@ -53,6 +54,8 @@ parser.add_argument('--hidden_dim', '-dh',
                     type=int, help='Hidden dimension (for the recurrent networks)', default=256)
 parser.add_argument('--label_smoothing', '-ls',
                     type=float, help='Label smoothing (interpolation coefficient with the unifrm distribution)', default=0.0)
+parser.add_argument('--language_model', '-lm',
+                    type=str, help='Language model to interpolate with', default=None)
 parser.add_argument('--dropout_rate', '-dr',
                     type=float, help='Dropout rate', default=0.0)
 parser.add_argument('--word_dropout_rate', '-wdr',

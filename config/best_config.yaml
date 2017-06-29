@@ -1,38 +1,61 @@
-dynet_seed: 3416888402
-dynet_mem : 512
-dynet_gpu : True
-exp_name : best
-word_emb : False
+dynet_seed: 314159
+dynet_mem: 3000
+dynet_gpu: True
+dynet_autobatch: 1
+exp_name: best
 bidir: True
-verbose : True
-att_dim : 256
-emb_dim : 512
-hidden_dim : 512
-max_len : 80
-dropout_rate : 0.4
-word_dropout_rate : 0.1
-gradient_clip: 1.0
-trainer: adam
+verbose: True
+att_dim: 256
+emb_dim: 512
+hidden_dim: 512
+max_len: 80
+dropout_rate: 0.4
+word_dropout_rate: 0.1
+label_smoothing: 0.1
+output_dir: output
+language_model: unigram
 train:
-  train : True
-  train_dst : en-de/train.en-de.low.filt.en
-  train_src : en-de/train.en-de.low.filt.de
-  valid_src : en-de/valid.en-de.low.de
-  valid_dst : en-de/valid.en-de.low.en
-  num_epochs : 10
-  batch_size : 32
-  patience : 2
-  dev_batch_size : 10
-  check_train_error_every : 100
-  check_valid_error_every : 2500
-  valid_bleu_every : 2500
-  learning_rate : 0.001
-  learning_rate_decay : 0.0
-  beam_size : 3
-  src_vocab_size : 40000
-  trg_vocab_size : 40000
+  train: true
+  train_dst: en-de/train.en-de.low.filt.en
+  train_src: en-de/train.en-de.low.filt.de
+  valid_src: en-de/valid.en-de.low.de
+  valid_dst: en-de/valid.en-de.low.en
+  num_epochs: 10
+  batch_size: 32
+  patience: 2
+  dev_batch_size: 10
+  check_train_error_every: 100
+  check_valid_error_every: 2500
+  valid_bleu_every: 2500
+  gradient_clip: 1.0
+  trainer: adam
+  learning_rate: 0.001
+  learning_rate_decay: 0.0
+  beam_size: 3
+  src_vocab_size: 40000
+  trg_vocab_size: 40000
+tune:
+  train: true
+  train_dst: en-de/train.en-de.low.filt.en
+  train_src: en-de/train.en-de.low.filt.de
+  valid_src: en-de/valid.en-de.low.de
+  valid_dst: en-de/valid.en-de.low.en
+  num_epochs: 10
+  batch_size: 32
+  patience: 2
+  dev_batch_size: 10
+  check_train_error_every: 100
+  check_valid_error_every: 2500
+  valid_bleu_every: 2500
+  gradient_clip: 0.1
+  trainer: sgd
+  learning_rate: 1.0
+  learning_rate_decay: 0.0
+  beam_size: 3
+  src_vocab_size: 40000
+  trg_vocab_size: 40000
 test:
-  test : True
-  test_src : en-de/test.en-de.low.de
-  test_dst : en-de/test.en-de.low.en
-  beam_size : 5
+  test: True
+  test_src: en-de/test.en-de.low.de
+  test_dst: en-de/test.en-de.low.en
+  beam_size: 5

@@ -8,6 +8,8 @@ import numpy as np
 import numpy.random as npr
 import dynet as dy
 
+import lm
+
 class Seq2SeqModel(object):
     """A neural sequence to sequence model with attention
     
@@ -26,6 +28,7 @@ class Seq2SeqModel(object):
                  model_file=None,
                  bidir=False,
                  word_emb=False,
+                 lang_model='uniform',
                  label_smoothing=0.0,
                  dropout=0.0,
                  word_dropout=0.0,
@@ -87,6 +90,9 @@ class Seq2SeqModel(object):
         self.bo_p = self.model.add_parameters((self.di,), init=dy.UniformInitializer(np.sqrt(3/self.di)))
         # Softmax parameters
         self.b_p = self.model.add_parameters((self.vt,), init=dy.ConstInitializer(0))
+        
+        # Target language model (for label smoothing)
+        self.lm = lang_model
 
     def prepare_batch(self, batch, eos):
         """Prepare batch of sentences for sequential processing
@@ -251,7 +257,10 @@ class Seq2SeqModel(object):
             # Loss
             if self.ls:
                 log_prob = dy.log_softmax(s)
-                err = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - dy.mean_elems(log_prob) * self.ls_eps
+                if self.lm is None:
+                    err = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - dy.mean_elems(log_prob) * self.ls_eps
+                else:
+                    err = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - dy.dot_product(self.lm.p_next_expr(cw), log_prob) * self.ls_eps
             else:
                 err = dy.pickneglogsoftmax(s, nw)
             err = dy.cmult(err, masksy_e)
