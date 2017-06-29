@@ -28,7 +28,7 @@ class Seq2SeqModel(object):
                  model_file=None,
                  bidir=False,
                  word_emb=False,
-                 lang_model='uniform',
+                 lang_model=None,
                  label_smoothing=0.0,
                  dropout=0.0,
                  word_dropout=0.0,
@@ -285,6 +285,7 @@ class Seq2SeqModel(object):
             dynet.Expression: Expression of the loss averaged on the minibatch
         """
         dy.renew_cg()
+        self.lm.init()
         encodings = self.encode(src, test=test)
         err = self.decode_loss(encodings, trg, test=test)
         return err

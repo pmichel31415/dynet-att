@@ -74,6 +74,7 @@ def get_language_model(opt, train_data, w2id, test=False):
     if opt.language_model == 'uniform':
        return None
     elif opt.language_model == 'unigram':
+       print('Using unigram lm')
        lang_model = lm.UnigramLanguageModel(w2id)
     else:
        print('Unknown language model %s, using unigram language model' % opt.language_model)
@@ -84,6 +85,7 @@ def get_language_model(opt, train_data, w2id, test=False):
             opt.lm_file = exp_filename(opt, 'lm')
         lang_model.load(opt.lm_file)
     else:
+        print('training lm')
         lang_model.fit(train_data)
         opt.lm_file = exp_filename(opt, 'lm')
         lang_model.save(opt.lm_file)

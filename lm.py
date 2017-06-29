@@ -6,6 +6,9 @@ import dynet as dy
 class LanguageModel(object):
     def p_next(self, sent):
         pass
+
+    def init(self):
+        pass
     
     def p_next_expr(self, sent):
         return dy.inputTensor(self.p_next(sent))
@@ -34,8 +37,14 @@ class UnigramLanguageModel(LanguageModel):
         self.eps = eps
         self.unigrams = np.ones(len(self.id2w)) / len(self.id2w)
 
+    def init(self):
+        self.u_e = dy.inputTensor(self.unigrams)
+
     def p_next(self, sent):
         return self.unigrams
+
+    def p_next_expr(self, sent):
+        return self.u_e
 
     def fit(self, corpus):
         self.unigrams = np.zeros(len(self.id2w)) + self.eps
