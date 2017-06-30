@@ -2,8 +2,9 @@ dynet_seed: 314159
 dynet_mem: 3000
 dynet_gpu: True
 dynet_autobatch: 1
-exp_name: best
-bidir: True
+encoder: bilstm
+attention: mlp
+decoder: lstm
 verbose: True
 att_dim: 256
 emb_dim: 512
@@ -32,8 +33,6 @@ train:
   learning_rate: 0.001
   learning_rate_decay: 0.0
   beam_size: 3
-  src_vocab_size: 40000
-  trg_vocab_size: 40000
 tune:
   train: true
   train_dst: en-de/train.en-de.low.filt.en
@@ -52,8 +51,6 @@ tune:
   learning_rate: 1.0
   learning_rate_decay: 0.0
   beam_size: 3
-  src_vocab_size: 40000
-  trg_vocab_size: 40000
 test:
   test: True
   test_src: en-de/test.en-de.low.de

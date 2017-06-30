@@ -56,6 +56,7 @@ def train(opt):
     i = 0
     for epoch in range(opt.num_epochs):
         for x, y in trainbatchloader:
+            s2s.set_train_mode()
             processed += sum(map(len, y))
             bsize = len(y)
             # Compute loss
@@ -75,6 +76,7 @@ def train(opt):
                 processed = 0
             if (i + 1) % opt.check_valid_error_every == 0:
                 # Check generalization error on the validation set from time to time
+                s2s.set_test_mode()
                 dev_loss = 0
                 dev_processed = 0
                 timer.restart()
@@ -90,6 +92,7 @@ def train(opt):
 
             if (i + 1) % opt.valid_bleu_every == 0:
                 # Check BLEU score on the validation set from time to time
+                s2s.set_test_mode()
                 log.info('Start translating validation set, buckle up!')
                 timer.restart()
                 with open(opt.valid_out, 'w+') as f:
@@ -140,6 +143,7 @@ def test(opt):
     log.info('Start running on test set, buckle up!')
     timer.restart()
     translations = []
+    s2s.set_test_mode()
     for i, x in enumerate(tests_data):
         y = s2s.translate(x, beam_size=opt.beam_size)
         translations.append(' '.join([ids2wt[w] for w in y[1:-1]]))

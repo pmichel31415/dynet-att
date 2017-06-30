@@ -1,6 +1,5 @@
 from __future__ import print_function, division
 
-import numpy as np
 import dynet as dy
 
 import sys
@@ -14,14 +13,17 @@ class Decoder(object):
     def __init__(self, pc):
         self.pc = pc.add_subcollection('dec')
 
-    def init(self):
+    def init(self, H, y, test=True, update=True):
         pass
 
-    def __call__(self, x):
+    def next(self, w, c, test=True, state=None):
+        raise NotImplemented()
+
+    def s(self, h, c, e, test=True):
         raise NotImplemented()
 
 
-class LSTMLMDecoder(Encoder):
+class LSTMLMDecoder(Decoder):
     """docstring for EmptyEncoder"""
 
     def __init__(self, nl, di, dh, vt, pc, pre_embs=None, dr=0.0, wdr=0.0):
@@ -34,10 +36,10 @@ class LSTMLMDecoder(Encoder):
         # LSTM Encoder
         self.lstm = dy.VanillaLSTMBuilder(self.nl, self.di, self.dh, self.pc)
         # Output layer
-        self.Wo_p = self.model.add_parameters((self.di, self.dh + self.di), name='Wo')
-        self.bo_p = self.model.add_parameters((self.di,), name='bo')
+        self.Wo_p = self.pc.add_parameters((self.di, self.dh + self.di), name='Wo')
+        self.bo_p = self.pc.add_parameters((self.di,), name='bo')
         # Embedding matrix
-        self.E = self.pc.add_parameters((self.vs, self.di), name='E')
+        self.E_p = self.pc.add_parameters((self.vt, self.di), name='E')
         if pre_embs is not None:
             self.E.set_value(pre_embs)
 
@@ -58,7 +60,7 @@ class LSTMLMDecoder(Encoder):
         self.E = self.E_p.expr(update)
 
     def next(self, w, c, test=True, state=None):
-        e = dy.pick_batch(D, w)
+        e = dy.pick_batch(self.E, w)
         if not test:
             e = dy.dropout_dim(e, 0, self.wdr)
         # Run LSTM
@@ -67,15 +69,15 @@ class LSTMLMDecoder(Encoder):
             next_state = self.ds
         else:
             next_state = state.add_input(e)
-        h = ds.output()
+        h = next_state.output()
         return h, e, next_state
 
-    def s(self, h, c, test=True):
+    def s(self, h, c, e, test=True):
         output = dy.affine_transform([self.bo, self.Wo, dy.concatenate([h, e])])
         if not test:
             output = dy.dropout(output, self.dr)
         # Score
-        s = D * output
+        s = self.E * output
         return s
 
 
@@ -91,13 +93,13 @@ class LSTMDecoder(Decoder):
         # LSTM Encoder
         self.lstm = dy.VanillaLSTMBuilder(self.nl, self.di + self.de, self.dh, self.pc)
         # Linear layer from last encoding to initial state
-        self.Wp_p = self.model.add_parameters((self.di, self.de), name='Wp')
-        self.bp_p = self.model.add_parameters((self.di,), name='bp')
+        self.Wp_p = self.pc.add_parameters((self.di, self.de), name='Wp')
+        self.bp_p = self.pc.add_parameters((self.di,), name='bp')
         # Output layer
-        self.Wo_p = self.model.add_parameters((self.di, self.dh + self.de + self.di), name='Wo')
-        self.bo_p = self.model.add_parameters((self.di,), name='bo')
+        self.Wo_p = self.pc.add_parameters((self.di, self.dh + self.de + self.di), name='Wo')
+        self.bo_p = self.pc.add_parameters((self.di,), name='bo')
         # Embedding matrix
-        self.E = self.pc.add_parameters((self.vs, self.di), name='E')
+        self.E_p = self.pc.add_parameters((self.vt, self.di), name='E')
         if pre_embs is not None:
             self.E.set_value(pre_embs)
 
@@ -112,7 +114,8 @@ class LSTMDecoder(Decoder):
         self.bp = self.bp_p.expr(update)
         last_enc = dy.pick(H, index=H.dim()[0][-1] - 1, dim=1)
         init_state = dy.affine_transform([self.bp, self.Wp, last_enc])
-        ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,), batch_size=bs)], update=update)
+        init_state = [init_state, dy.zeroes((self.dh,), batch_size=bs)]
+        self.ds = self.lstm.initial_state(init_state, update=update)
         # Initialize dropout masks
         if not test:
             self.lstm.set_dropout_masks(bs)
@@ -123,7 +126,7 @@ class LSTMDecoder(Decoder):
         self.E = self.E_p.expr(update)
 
     def next(self, w, c, test=True, state=None):
-        e = dy.pick_batch(D, w)
+        e = dy.pick_batch(self.E, w)
         if not test:
             e = dy.dropout_dim(e, 0, self.wdr)
         x = dy.concatenate([e, c])
@@ -133,15 +136,15 @@ class LSTMDecoder(Decoder):
             next_state = self.ds
         else:
             next_state = state.add_input(x)
-        h = ds.output()
+        h = next_state.output()
         return h, e, next_state
 
-    def s(self, h, c, test=True):
+    def s(self, h, c, e, test=True):
         output = dy.affine_transform([self.bo, self.Wo, dy.concatenate([h, c, e])])
         if not test:
             output = dy.dropout(output, self.dr)
         # Score
-        s = D * output
+        s = self.E * output
         return s
 
 

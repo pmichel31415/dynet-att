@@ -65,14 +65,17 @@ class Seq2SeqModel(object):
         self.vs, self.vt = len(src_dic), len(trg_dic)
         self.di, self.dh, self.da = input_dim, hidden_dim, att_dim
         # Model
-        self.pc = dy.ParameterCollection('s2s')
+        self.pc = dy.ParameterCollection()
         self.model_file = model_file
         # Encoder
-        self.enc = encoders.get_encoder(enc_type, self.nl, self.di, self.dh, self.vs, self.pc, dr=self.dr, pre_embs=None)
+        self.enc = encoders.get_encoder(enc_type, self.nl, self.di,
+                                        self.dh, self.vs, self.pc,
+                                        dr=self.dr, pre_embs=None)
         # Attention module
-        self.att = attention.get_attention(att_type, self.di, self.dh, self.da, self.pc)
+        self.att = attention.get_attention(att_type, self.enc.dim, self.dh, self.da, self.pc)
         # Decoder
-        self.dec = decoders.get_decoder(dec_type, self.nl, self.di, self.enc.dim, self.dh, self.vt, self.pc,
+        self.dec = decoders.get_decoder(dec_type, self.nl, self.di,
+                                        self.enc.dim, self.dh, self.vt, self.pc,
                                         pre_embs=None, dr=self.dr, wdr=self.wdr)
 
         # Target language model (for label smoothing)
@@ -172,7 +175,7 @@ class Seq2SeqModel(object):
                 loss = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - \
                     dy.dot_product(self.lm.p_next_expr(cw), log_prob) * self.ls_eps
         else:
-            loss = dy.pickneglogsoftmax(s, nw)
+            loss = dy.pickneglogsoftmax_batch(s, nw)
         return loss
 
     def decode_loss(self, encodings, trg):
@@ -189,7 +192,7 @@ class Seq2SeqModel(object):
         # Init decoder
         self.dec.init(encodings, y, test=self.test, update=self.update)
         # Initialize context
-        c = dy.zeroes((self.enc.dim,), batch_size=bsize)
+        context = dy.zeroes((self.enc.dim,), batch_size=bsize)
         # Start decoding
         errs = []
         for cw, nw, mask in zip(y, y[1:], masksy[1:]):
@@ -198,7 +201,7 @@ class Seq2SeqModel(object):
             # Compute next context
             context, _ = self.attend(encodings, h)
             # Score
-            s = self.dec.s(h, context, test=self.test)
+            s = self.dec.s(h, context, e, test=self.test)
             masksy_e = dy.inputTensor(mask, batched=True)
             # Loss
             loss = self.cross_entropy_loss(s, nw, cw)
@@ -220,9 +223,10 @@ class Seq2SeqModel(object):
         :returns: Expression of the loss averaged on the minibatch
         """
         dy.renew_cg()
-        self.lm.init()
-        encodings = self.encode(src, test=test)
-        err = self.decode_loss(encodings, trg, test=test)
+        if self.lm is not None:
+            self.lm.init()
+        encodings = self.encode(src)
+        err = self.decode_loss(encodings, trg)
         return err
 
     def translate(self, x, beam_size=1):
@@ -237,46 +241,52 @@ class Seq2SeqModel(object):
         :returns generated translation (list of indices)
         """
         dy.renew_cg()
-        input_len = len(x)
         encodings = self.encode([x])
         # Decode
-        return self.beam_decode(encodings, beam_size)
+        return self.beam_decode(encodings, input_len=len(x), beam_size=beam_size)
 
-    def beam_decode(self, encodings, beam_size=1)
+    def beam_decode(self, encodings, input_len=10, beam_size=1):
         # Add parameters to the graph
-        self.dec.init(encodings, [[]], test=self.test, update=self.update)
+        self.dec.init(encodings, [[self.trg_sos]], test=self.test, update=self.update)
         # Initialize context
         context = dy.zeroes((self.enc.dim,))
         # Initialize beam
-        beams = [beam.Beam(ds, context, [self.trg_sos], 0.0)]
+        beams = [beam.Beam(self.dec.ds, context, [self.trg_sos], 0.0)]
         # Loop
         for i in range(int(min(self.max_len, input_len * 1.5))):
             new_beam = []
             p_list = []
             for b in beams:
-                h, e, state = self.dec.next(b.words[-1], b.context, state=b.state)
+                if b.words[-1] == self.trg_eos:
+                    p_list.append(dy.zeroes((self.vt,)))
+                    continue
+                h, e, b.state = self.dec.next([b.words[-1]], b.context, state=b.state)
                 # Compute next context
-                context, _ = self.attend(encodings, h)
+                b.context, _ = self.attend(encodings, h)
                 # Score
-                s = self.dec.s(h, context, test=self.test)
+                s = self.dec.s(h, b.context, e, test=self.test)
                 # Probabilities
                 p_list.append(dy.softmax(s))
             # Run one forward pass for all elements (maybe leverage autobatching)
-            p_list = dy.concatenate_cols(p_list).npvalue().T
+            p_list = dy.concatenate_to_batch(p_list).npvalue().T
             # Only keep the best for each beam
-            for p, b in zip(p_list, beam):
+            for p, b in zip(p_list, beams):
                 # Careful for floating errors
                 p = p.flatten() / p.sum()
                 kbest = np.argsort(p)
                 for nw in kbest[-beam_size:]:
-                    new_beam.append(Beam(b.state, b.context, b.words + [nw], b.logprob + np.log(p[nw])))
+                    if b.words[-1] == self.trg_eos:
+                        new_beam.append(beam.Beam(b.state, b.context, b.words, b.logprob))
+                    else:
+                        new_beam.append(beam.Beam(b.state, b.context, b.words +
+                                                  [nw], b.logprob + np.log(p[nw])))
             # Only keep the best
-            beam = sorted(new_beam, key=lambda b: b.logprob)[-beam_size:]
+            beams = sorted(new_beam, key=lambda b: b.logprob)[-beam_size:]
 
-            if beam[-1].words[-1] == self.trg_eos:
+            if beams[-1].words[-1] == self.trg_eos:
                 break
 
-        return beam[-1].words
+        return beams[-1].words
 
     def save(self):
         """Save model

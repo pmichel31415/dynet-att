@@ -1,34 +1,38 @@
 from __future__ import print_function, division
 
-import numpy as np
 import dynet as dy
 
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
+
 class Attention(object):
     """docstring for Attention"""
-    def __init__(self, pc):
-        self.pc=pc.add_subcollection('att')
 
-    def init(self):
+    def __init__(self, pc):
+        self.pc = pc.add_subcollection('att')
+
+    def init(self, test=True, update=True):
         pass
 
     def __call__(self, H, h, test=True):
         raise NotImplemented()
 
+
 class EmptyAttention(Attention):
     """docstring for EmptyAttention"""
+
     def __init__(self, pc):
         super(EmptyAttention, self).__init__(pc)
 
     def __call__(self, H, h, test=True):
-        return 0
-        
+        return 0, 0
+
 
 class MLPAttention(Attention):
     """docstring for MLPAttention"""
+
     def __init__(self, di, dh, da, pc):
         super(MLPAttention, self).__init__(pc)
         self.di, self.dh, self.da = di, dh, da
@@ -58,4 +62,3 @@ def get_attention(attention, di, dh, da, pc):
     else:
         print('Unknown attention type "%s", using mlp attention' % attention)
         return MLPAttention(di, dh, da, pc)
-

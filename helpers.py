@@ -120,29 +120,29 @@ def get_dictionaries(opt, test=False):
 
 def get_trainer(opt, s2s):
     if opt.trainer == 'sgd':
-        trainer = dy.SimpleSGDTrainer(s2s.model,
+        trainer = dy.SimpleSGDTrainer(s2s.pc,
                                       e0=opt.learning_rate,
                                       edecay=opt.learning_rate_decay)
     elif opt.trainer == 'clr':
-        trainer = dy.CyclicalSGDTrainer(s2s.model,
+        trainer = dy.CyclicalSGDTrainer(s2s.pc,
                                         e0_min=opt.learning_rate / 10.0,
                                         e0_max=opt.learning_rate,
                                         edecay=opt.learning_rate_decay)
     elif opt.trainer == 'momentum':
-        trainer = dy.MomentumSGDTrainer(s2s.model,
+        trainer = dy.MomentumSGDTrainer(s2s.pc,
                                         e0=opt.learning_rate,
                                         edecay=opt.learning_rate_decay)
     elif opt.trainer == 'rmsprop':
-        trainer = dy.RMSPropTrainer(s2s.model,
+        trainer = dy.RMSPropTrainer(s2s.pc,
                                     e0=opt.learning_rate,
                                     edecay=opt.learning_rate_decay)
     elif opt.trainer == 'adam':
-        trainer = dy.AdamTrainer(s2s.model,
+        trainer = dy.AdamTrainer(s2s.pc,
                                  opt.learning_rate,
                                  edecay=opt.learning_rate_decay)
     else:
         print('Trainer name invalid or not provided, using SGD', file=sys.stderr)
-        trainer = dy.SimpleSGDTrainer(s2s.model,
+        trainer = dy.SimpleSGDTrainer(s2s.pc,
                                       e0=opt.learning_rate,
                                       edecay=opt.learning_rate_decay)
 

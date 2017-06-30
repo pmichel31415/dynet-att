@@ -1,6 +1,5 @@
 from __future__ import print_function, division
 
-import numpy as np
 import dynet as dy
 
 import sys
@@ -18,7 +17,7 @@ class Encoder(object):
     def init(self, x, test=True, update=True):
         pass
 
-    def __call__(self, x):
+    def __call__(self, x, test=True):
         raise NotImplemented()
 
 
@@ -28,7 +27,7 @@ class EmptyEncoder(Encoder):
     def __init__(self, pc):
         super(EmptyEncoder, self).__init__(pc)
 
-    def __call__(self, x):
+    def __call__(self, x, test=True):
         return 0
 
 
@@ -69,7 +68,7 @@ class LSTMEncoder(Encoder):
         return H
 
 
-class BiLSTMEncoder(Encoder):
+class BiLSTMEncoder(LSTMEncoder):
     """docstring for BiLSTMEncoder"""
 
     def __init__(self, nl, di, dh, vs, pc, dr=0.0, pre_embs=None):
@@ -79,7 +78,7 @@ class BiLSTMEncoder(Encoder):
         self.rev_lstm = dy.VanillaLSTMBuilder(self.nl, self.di, self.dh, self.pc)
 
     def init(self, x, test=True, update=True):
-        super(BiLSTMEncoder, self).init(test)
+        super(BiLSTMEncoder, self).init(x, test, update)
         bs = len(x[0])
         if not test:
             self.rev_lstm.set_dropout(self.dr)
