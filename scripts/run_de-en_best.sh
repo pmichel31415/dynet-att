@@ -5,7 +5,7 @@
 #SBATCH --mem=10g
 #SBATCH -t 0
 source ~/.bashrc
-EN=best_unigram
+EN=best
 CFG_FILE=temp/`uuidgen`.yaml
 cp config/best_config.yaml $CFG_FILE
 # Training

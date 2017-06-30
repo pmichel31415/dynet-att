@@ -81,7 +81,7 @@ def read_dic(file, max_size=20000, min_freq=1):
                 freqs[word] += 1
 
     sorted_words = sorted(freqs.items(), key=lambda x: x[1], reverse=True)
-    for i in range(max_size):
+    for i in range(min(max_size, len(sorted_words))):
         word, freq = sorted_words[i]
         if freq <= min_freq:
             continue

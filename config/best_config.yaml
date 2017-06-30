@@ -12,9 +12,11 @@ hidden_dim: 512
 max_len: 80
 dropout_rate: 0.4
 word_dropout_rate: 0.1
-label_smoothing: 0.1
+label_smoothing: 0.0
 output_dir: output
-language_model: unigram
+language_model: uniform
+src_vocab_size : 50000
+trg_vocab_size : 50000
 train:
   train: true
   train_dst: en-de/train.en-de.low.filt.en
