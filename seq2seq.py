@@ -3,6 +3,11 @@ from __future__ import print_function, division
 import numpy as np
 import dynet as dy
 
+import encoders
+import attention
+import decoders
+import beam
+
 import sys
 reload(sys)
 sys.setdefaultencoding("utf-8")
@@ -25,8 +30,9 @@ class Seq2SeqModel(object):
                  src_dic,
                  trg_dic,
                  model_file=None,
-                 bidir=False,
-                 word_emb=False,
+                 enc_type='lstm',
+                 att_type='mlp',
+                 dec_type='lstm',
                  lang_model=None,
                  label_smoothing=0.0,
                  dropout=0.0,
@@ -34,24 +40,21 @@ class Seq2SeqModel(object):
                  max_len=60):
         """Constructor
 
-        Arguments:
-            input_dim (int): Embedding dimension
-            hidden_dim (int): Dimension of the recurrent layers
-            att_dim (int): Dimension of the hidden layer in the attention MLP
-            src_dic (dict): Dictionary of the source language mapping words to indices
-            trg_dic (dict): Dictionary of the target language mapping words to indices
-
-        Keyword Arguments:
-            model_file (str): File where the model should be saved (default: (None))
-            bidir (bool): Whether to use a bidirectionnal encoder (default: (False))
-            word_emb (bool): Whether to use residual connections between
-                source embeddings and the attention layer (default: (False))
-            dropout (number): dropout rate for the output layer (before softmax) (default: (0.0))
-            max_len (number): Maximum length allowed when generating translations (default: (60))
+        :param input_dim: Embedding dimension
+        :param hidden_dim: Dimension of the recurrent layers
+        :param att_dim: Dimension of the hidden layer in the attention MLP
+        :param src_dic: Dictionary of the source language mapping words to indices
+        :param trg_dic: Dictionary of the target language mapping words to indices
+        :param enc_type: Type of encoder
+        :param att_type: Type of attention mechanism
+        :param dec_type: Type of decoder
+        :param model_file: File where the model should be saved (default: (None))
+        :param label_smoothing: interpolation coefficient with second output distribution
+        :param dropout: dropout rate for parameters
+        :param word_dropout: dropout rate for words in the decoder
+        :param max_len: Maximum length allowed when generating translations (default: (60))
         """
         # Store config
-        self.bidir = bidir
-        self.word_emb = word_emb
         self.nl = num_layers
         self.dr, self.wdr = dropout, word_dropout
         self.ls, self.ls_eps = (label_smoothing > 0), label_smoothing
@@ -61,40 +64,34 @@ class Seq2SeqModel(object):
         # Dimensions
         self.vs, self.vt = len(src_dic), len(trg_dic)
         self.di, self.dh, self.da = input_dim, hidden_dim, att_dim
-        self.enc_dim = self.dh
-        if self.bidir:
-            self.enc_dim += self.dh
-        if self.word_emb:
-            self.enc_dim += self.di
-        self.dec_dim = self.di + self.enc_dim
-        self.out_dim = self.di + self.dh + self.enc_dim
         # Model
-        self.model = dy.Model()
+        self.pc = dy.ParameterCollection('s2s')
         self.model_file = model_file
-        # RNN parameters
-        self.enc = dy.VanillaLSTMBuilder(self.nl, self.di, self.dh, self.model)
-        self.rev_enc = dy.VanillaLSTMBuilder(self.nl, self.di, self.dh, self.model)
-        self.dec = dy.VanillaLSTMBuilder(self.nl, self.dec_dim, self.dh, self.model)
-        # State passing parameters
-        self.Wp_p = self.model.add_parameters((self.dh, self.enc_dim))
-        self.bp_p = self.model.add_parameters((self.dh,))
-        # Attention parameters
-        self.Va_p = self.model.add_parameters((self.da))
-        self.Wa_p = self.model.add_parameters((self.da, self.enc_dim))
-        self.Wha_p = self.model.add_parameters((self.da, self.dh))
-        # Embedding parameters
-        self.MS_p = self.model.add_lookup_parameters((self.vs, self.di))
-        self.MT_p = self.model.add_parameters((self.vt, self.di))
-        # Output parameters
-        self.Wo_p = self.model.add_parameters(
-            (self.di, self.out_dim), dy.UniformInitializer(np.sqrt(6 / (self.di + self.out_dim))))
-        self.bo_p = self.model.add_parameters(
-            (self.di,), init=dy.UniformInitializer(np.sqrt(3 / self.di)))
-        # Softmax parameters
-        self.b_p = self.model.add_parameters((self.vt,), init=dy.ConstInitializer(0))
+        # Encoder
+        self.enc = encoders.get_encoder(enc_type, self.nl, self.di, self.dh, self.vs, self.pc, dr=self.dr, pre_embs=None)
+        # Attention module
+        self.att = attention.get_attention(att_type, self.di, self.dh, self.da, self.pc)
+        # Decoder
+        self.dec = decoders.get_decoder(dec_type, self.nl, self.di, self.enc.dim, self.dh, self.vt, self.pc,
+                                        pre_embs=None, dr=self.dr, wdr=self.wdr)
 
         # Target language model (for label smoothing)
         self.lm = lang_model
+
+        self.test = True
+        self.update = True
+
+    def set_test_mode(self):
+        self.test = True
+
+    def set_train_mode(self):
+        self.test = False
+
+    def freeze_parameters(self):
+        self.update = False
+
+    def thaw_parameters(self):
+        self.update = True
 
     def prepare_batch(self, batch, eos):
         """Prepare batch of sentences for sequential processing
@@ -108,12 +105,10 @@ class Seq2SeqModel(object):
         [["I","like","chocolate"],["Me","too"]]
         -> [["I","Me"],["like","too"],["chocolate","EOS"]], [[1,1],[1,1],[1,0]]
 
-        Arguments:
-            batch (list): List of sentences
-            eos (type): EOS index
+        :param batch: List of sentences
+        :param eos: EOS index
 
-        Returns:
-            tuple -- (prepared_batch, masks) both of shape (sentence_length, batch_size)
+        :returns: (prepared_batch, masks) both of shape (sentence_length, batch_size)
         """
         bsize = len(batch)
 
@@ -131,60 +126,18 @@ class Seq2SeqModel(object):
             x[:, i] = sent
         return x, masks
 
-    def drop_words(self, x, test):
-        if not test:
-            return dy.dropout_dim(x, 0, self.wdr)
-        else:
-            return x
-
-    def encode(self, src, test=False):
+    def encode(self, src):
         """Encode a batch of sentences
 
-        Arguments:
-            src (list): List of sentences. It is assumed that all
-                source sentences have the same length
+        :param src: List of sentences. It is assumed that all
+            source sentences have the same length
 
-        Keyword Arguments:
-            test (bool) -- Switch used for things like dropout where
-                the behaviour is different at test time (default: (False)
-
-        Returns:
-            dynet.Expression -- Expression of the encodings
+        :returns: Expression of the encodings
         """
         # Prepare batch
         x, _ = self.prepare_batch(src, self.src_eos)
-        if not test:
-            self.enc.set_dropout(self.dr)
-        else:
-            self.enc.disable_dropout()
-        # Add encoder to computation graph
-        es = self.enc.initial_state()
-        if not test:
-            self.enc.set_dropout_masks(len(x[0]))
-        # Embed words
-        wembs = [dy.lookup_batch(self.MS_p, iw) for iw in x]
-        # Encode sentence
-        encoded_states = es.transduce(wembs)
-        # Use bidirectional encoder
-        if self.bidir:
-            if not test:
-                self.rev_enc.set_dropout(self.dr)
-            else:
-                self.rev_enc.disable_dropout()
-            res = self.rev_enc.initial_state()
-            if not test:
-                self.rev_enc.set_dropout_masks(len(x[0]))
-            rev_encoded_states = res.transduce(wembs[::-1])[::-1]
-        # Create encoding matrix
-        H = dy.concatenate_cols(encoded_states)
-        if self.bidir:
-            H_bidir = dy.concatenate_cols(rev_encoded_states)
-            H = dy.concatenate([H, H_bidir])
-        if self.word_emb:
-            H_word_embs = dy.concatenate_cols(wembs)
-            H = dy.concatenate([H, H_word_embs])
-
-        return H
+        self.enc.init(x, test=self.test, update=self.update)
+        return self.enc(x, test=self.test)
 
     def attend(self, encodings, h):
         """Compute attention score
@@ -199,85 +152,60 @@ class Seq2SeqModel(object):
                 \alpha_{ij}&=\frac{s_{ij}}{\sum_{i'}s_{i'j}}\\
             \end{split}
 
-        Arguments:
-            encodings (dynet.Expression): Source sentence encodings obtained with self.encode
-            h (dynet.Expression): Decoder output at the previous timestep
+        :param encodings: Source sentence encodings obtained with self.encode
+        :param h: Decoder output at the previous timestep
 
-        Returns:
-            tuple: Two dynet Expressions, the context and the attention weights
+        :returns: Two dynet Expressions, the context and the attention weights
         """
-        Va, Wa, Wha = self.Va_p.expr(), self.Wa_p.expr(), self.Wha_p.expr()
-        d = dy.tanh(dy.colwise_add(Wa * encodings, Wha * h))
-        scores = dy.transpose(d) * Va
-        weights = dy.softmax(scores)
-        context = encodings * weights
-        return context, weights
+        self.att.init(test=self.test, update=self.update)
+        return self.att(encodings, h, test=self.test)
 
-    def decode_loss(self, encodings, trg, test=False):
+    def cross_entropy_loss(self, s, nw, cw):
+        """Calculates the cross-entropy
+        """
+        if self.ls:
+            log_prob = dy.log_softmax(s)
+            if self.lm is None:
+                loss = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - \
+                    dy.mean_elems(log_prob) * self.ls_eps
+            else:
+                loss = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - \
+                    dy.dot_product(self.lm.p_next_expr(cw), log_prob) * self.ls_eps
+        else:
+            loss = dy.pickneglogsoftmax(s, nw)
+        return loss
+
+    def decode_loss(self, encodings, trg):
         """Compute the negative conditional log likelihood of the target sentence
         given the encoding of the source sentence
 
-        Arguments:
-            encodings (dynet.Expression): Source sentence encodings obtained with self.encode
-            trg (list): List of target sentences
+        :param encodings: Source sentence encodings obtained with self.encode
+        :param trg: List of target sentences
 
-        Keyword Arguments:
-            test (bool): Switch used for things like dropout where the behaviour
-                is different at test time (default: (False)
-
-        Returns:
-            dynet.Expression: Expression of the loss averaged on the minibatch
+        :returns: Expression of the loss averaged on the minibatch
         """
         y, masksy = self.prepare_batch(trg, self.trg_eos)
         slen, bsize = y.shape
-        # Add parameters to the graph
-        Wp, bp = self.Wp_p.expr(), self.bp_p.expr()
-        Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
-        D, b = dy.parameter(self.MT_p), self.b_p.expr()
-        # Initialize decoder with last encoding
-        if not test:
-            self.dec.set_dropout(self.dr)
-        else:
-            self.dec.disable_dropout()
-        last_enc = dy.pick(encodings, index=encodings.dim()[0][-1] - 1, dim=1)
-
-        init_state = dy.affine_transform([bp, Wp, last_enc])
-        ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,), batch_size=bsize)])
-        if not test:
-            self.dec.set_dropout_masks(len(y[0]))
+        # Init decoder
+        self.dec.init(encodings, y, test=self.test, update=self.update)
         # Initialize context
-        context = dy.zeroes((self.enc_dim,), batch_size=bsize)
+        c = dy.zeroes((self.enc.dim,), batch_size=bsize)
         # Start decoding
         errs = []
         for cw, nw, mask in zip(y, y[1:], masksy[1:]):
-            embs = self.drop_words(dy.pick_batch(D, cw), test)
             # Run LSTM
-            ds = ds.add_input(dy.concatenate([embs, context]))
-            h = ds.output()
+            h, e, _ = self.dec.next(cw, context, test=self.test)
             # Compute next context
             context, _ = self.attend(encodings, h)
-            # Compute output with residual connections
-            output = dy.affine_transform([bo, Wo, dy.concatenate([h, context, embs])])
-            if not test:
-                output = dy.dropout(output, self.dr)
             # Score
-            s = dy.affine_transform([b, D, output])
+            s = self.dec.s(h, context, test=self.test)
             masksy_e = dy.inputTensor(mask, batched=True)
             # Loss
-            if self.ls:
-                log_prob = dy.log_softmax(s)
-                if self.lm is None:
-                    err = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - \
-                        dy.mean_elems(log_prob) * self.ls_eps
-                else:
-                    err = - dy.pick_batch(log_prob, nw) * (1 - self.ls_eps) - \
-                        dy.dot_product(self.lm.p_next_expr(cw), log_prob) * self.ls_eps
-            else:
-                err = dy.pickneglogsoftmax(s, nw)
-            err = dy.cmult(err, masksy_e)
-            errs.append(err)
+            loss = self.cross_entropy_loss(s, nw, cw)
+            loss = dy.cmult(loss, masksy_e)
+            errs.append(loss)
         # Add all losses together
-        err = dy.sum_batches(dy.esum(errs)) / float(bsize)
+        err = dy.mean_batches(dy.esum(errs))
         return err
 
     def calculate_loss(self, src, trg, test=False):
@@ -285,17 +213,11 @@ class Seq2SeqModel(object):
 
         Combines encoding and decoding
 
-        Arguments:
-            src (list): List of sentences. It is assumed that all
-                source sentences have the same length
-            trg (list): List of target sentences
+        :param src: List of sentences. It is assumed that all
+                    source sentences have the same length
+        :param trg: List of target sentences
 
-        Keyword Arguments:
-            test (bool): Switch used for things like dropout where
-                the behaviour is different at test time (default: (False)
-
-        Returns:
-            dynet.Expression: Expression of the loss averaged on the minibatch
+        :returns: Expression of the loss averaged on the minibatch
         """
         dy.renew_cg()
         self.lm.init()
@@ -308,72 +230,64 @@ class Seq2SeqModel(object):
 
         Translate a single source sentence by decoding using beam search
 
-        Arguments:
-            x (list): Source sentence (list of indices)
+        :param x: Source sentence (list of indices)
+        :param beam_size: Size of the beam for beam search.
+            A value of 1 means greedy decoding (default: (1))
 
-        Keyword Arguments:
-            beam_size (int): Size of the beam for beam search.
-                A value of 1 means greedy decoding (default: (1))
-
-        Returns:
-            list: generated translation (list of indices)
+        :returns generated translation (list of indices)
         """
         dy.renew_cg()
         input_len = len(x)
-        encodings = self.encode([x], test=True)
+        encodings = self.encode([x])
         # Decode
+        return self.beam_decode(encodings, beam_size)
+
+    def beam_decode(self, encodings, beam_size=1)
         # Add parameters to the graph
-        Wp, bp = self.Wp_p.expr(), self.bp_p.expr()
-        Wo, bo = self.Wo_p.expr(), self.bo_p.expr()
-        D, b = dy.parameter(self.MT_p), self.b_p.expr()
-        # Initialize decoder with last encoding
-        self.dec.disable_dropout()
-        last_enc = dy.pick(encodings, index=encodings.dim()[0][-1] - 1, dim=1)
-        init_state = dy.affine_transform([bp, Wp, last_enc])
-        ds = self.dec.initial_state([init_state, dy.zeroes((self.dh,))])
+        self.dec.init(encodings, [[]], test=self.test, update=self.update)
         # Initialize context
-        context = dy.zeroes((self.enc_dim,))
+        context = dy.zeroes((self.enc.dim,))
         # Initialize beam
-        beam = [(ds, context, [self.trg_sos], 0.0)]
+        beams = [beam.Beam(ds, context, [self.trg_sos], 0.0)]
         # Loop
         for i in range(int(min(self.max_len, input_len * 1.5))):
             new_beam = []
-            for ds, pc, pw, logprob in beam:
-                embs = dy.pick(D, pw[-1])
-                # Run LSTM
-                ds = ds.add_input(dy.concatenate([embs, pc]))
-                h = ds.output()
+            p_list = []
+            for b in beams:
+                h, e, state = self.dec.next(b.words[-1], b.context, state=b.state)
                 # Compute next context
                 context, _ = self.attend(encodings, h)
-                # Compute output with residual connections
-                output = dy.affine_transform([bo, Wo, dy.concatenate([h, context, embs])])
                 # Score
-                s = dy.affine_transform([b, D, output])
+                s = self.dec.s(h, context, test=self.test)
                 # Probabilities
-                p = dy.softmax(s).npvalue().flatten()
-                # Careful of float error
-                p = p / p.sum()
+                p_list.append(dy.softmax(s))
+            # Run one forward pass for all elements (maybe leverage autobatching)
+            p_list = dy.concatenate_cols(p_list).npvalue().T
+            # Only keep the best for each beam
+            for p, b in zip(p_list, beam):
+                # Careful for floating errors
+                p = p.flatten() / p.sum()
                 kbest = np.argsort(p)
                 for nw in kbest[-beam_size:]:
-                    new_beam.append((ds, context, pw + [nw], logprob + np.log(p[nw])))
+                    new_beam.append(Beam(b.state, b.context, b.words + [nw], b.logprob + np.log(p[nw])))
+            # Only keep the best
+            beam = sorted(new_beam, key=lambda b: b.logprob)[-beam_size:]
 
-            beam = sorted(new_beam, key=lambda x: x[-1])[-beam_size:]
-
-            if beam[-1][2][-1] == self.trg_eos:
+            if beam[-1].words[-1] == self.trg_eos:
                 break
 
-        return beam[-1][2]
+        return beam[-1].words
 
     def save(self):
         """Save model
 
         Saves the model holding the parameters to self.model_file
         """
-        self.model.save(self.model_file)
+        self.pc.save(self.model_file)
 
     def load(self):
         """Load model
 
         Loads the model holding the parameters from self.model_file
         """
-        self.model.load(self.model_file)
+        self.pc.populate(self.model_file)

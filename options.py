@@ -48,6 +48,12 @@ parser.add_argument('--batch_size', '-bs',
                     type=int, help='minibatch size', default=20)
 parser.add_argument('--dev_batch_size', '-dbs',
                     type=int, help='minibatch size for the validation set', default=10)
+parser.add_argument("--encoder", '-enc', type=str,
+                    help='Encoder type', default='bilstm')
+parser.add_argument("--attention", '-att', type=str,
+                    help='Attention type', default='mlp')
+parser.add_argument("--decoder", '-dec', type=str,
+                    help='Encoder type', default='lstm')
 parser.add_argument('--num_layers', '-nl', type=int, default=1,
                     help='Number of layers in the encoder/decoder (For now only one is supported)')
 parser.add_argument('--emb_dim', '-de',
@@ -89,12 +95,6 @@ parser.add_argument('--min_freq', '-mf', type=int,
                     help='Minimum frequency under which words are unked', default=1)
 parser.add_argument("--exp_name", '-en', type=str, default='experiment',
                     help='Name of the experiment (used so save the model)')
-parser.add_argument("--bidir", '-bid',
-                    help="Activates bidirectionnal encoding",
-                    action="store_true")
-parser.add_argument("--word_emb", '-we',
-                    help="Activates direct word embedding for attention [currently deactivated]",
-                    action="store_true")
 parser.add_argument("--verbose", '-v',
                     help="increase output verbosity",
                     action="store_true")
