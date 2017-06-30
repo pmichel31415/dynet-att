@@ -268,21 +268,20 @@ class Seq2SeqModel(object):
                 # Probabilities
                 p_list.append(dy.softmax(s))
             # Run one forward pass for all elements (maybe leverage autobatching)
-            p_list = dy.concatenate_to_batch(p_list).npvalue().T
+            p_list = dy.concatenate_to_batch(p_list).npvalue().T.reshape(-1, self.vt)
             # Only keep the best for each beam
             for p, b in zip(p_list, beams):
                 # Careful for floating errors
                 p = p.flatten() / p.sum()
                 kbest = np.argsort(p)
-                for nw in kbest[-beam_size:]:
-                    if b.words[-1] == self.trg_eos:
-                        new_beam.append(beam.Beam(b.state, b.context, b.words, b.logprob))
-                    else:
+                if b.words[-1] == self.trg_eos:
+                    new_beam.append(beam.Beam(b.state, b.context, b.words, b.logprob))
+                else:
+                    for nw in kbest[-beam_size:]:
                         new_beam.append(beam.Beam(b.state, b.context, b.words +
                                                   [nw], b.logprob + np.log(p[nw])))
             # Only keep the best
             beams = sorted(new_beam, key=lambda b: b.logprob)[-beam_size:]
-
             if beams[-1].words[-1] == self.trg_eos:
                 break
 
