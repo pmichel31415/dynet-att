@@ -258,7 +258,7 @@ class Seq2SeqModel(object):
             p_list = []
             for b in beams:
                 if b.words[-1] == self.trg_eos:
-                    p_list.append(dy.zeroes((self.vt,)))
+                    p_list.append(dy.zeroes((self.vt,)) + 1)
                     continue
                 h, e, b.state = self.dec.next([b.words[-1]], b.context, state=b.state)
                 # Compute next context

@@ -100,6 +100,7 @@ class LSTMDecoder(Decoder):
         self.bo_p = self.pc.add_parameters((self.di,), name='bo')
         # Embedding matrix
         self.E_p = self.pc.add_parameters((self.vt, self.di), name='E')
+        self.b_p = self.pc.add_parameters((self.vt,), init=dy.ConstInitializer(0))
         if pre_embs is not None:
             self.E.set_value(pre_embs)
 
@@ -124,6 +125,7 @@ class LSTMDecoder(Decoder):
         self.bo = self.bo_p.expr(update)
 
         self.E = self.E_p.expr(update)
+        self.b = self.b_p.expr(False)
 
     def next(self, w, c, test=True, state=None):
         e = dy.pick_batch(self.E, w)
@@ -144,7 +146,7 @@ class LSTMDecoder(Decoder):
         if not test:
             output = dy.dropout(output, self.dr)
         # Score
-        s = self.E * output
+        s = dy.affine_transform([self.b, self.E, output])
         return s
 
 

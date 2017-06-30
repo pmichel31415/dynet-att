@@ -135,7 +135,7 @@ def test(opt):
     lang_model = helpers.get_language_model(opt, None, widst, test=True)
     # Create model ======================================================
     log.info('Creating model')
-    s2s = helpers.build_model(opt, widss, widst, lang_model)
+    s2s = helpers.build_model(opt, widss, widst, lang_model, test=True)
     # Print configuration ===============================================
     if opt.verbose:
         options.print_config(opt, src_dict_size=len(widss), trg_dict_size=len(widst))
