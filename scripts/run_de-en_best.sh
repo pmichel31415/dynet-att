@@ -4,12 +4,11 @@
 #SBATCH --gres=gpu:1
 #SBATCH --mem=10g
 #SBATCH -t 0
-#SBATCH -o output/log_de-en_best.txt
 source ~/.bashrc
+EN=best
+CFG_FILE=temp/`uuidgen`.yaml
+cp config/best_config.yaml $CFG_FILE
 # Training
-python run.py -c config/best_config.yaml -e train
-echo "Done training!"
-
+python run.py -c $CFG_FILE -e train --exp_name $EN > output/log_${EN}.txt 2>&1
 # Testing
-python run.py -c config/best_config.yaml -e test
-echo "Done testing!"
+python run.py -c $CFG_FILE -e test --exp_name $EN >> output/log_${EN}.txt 2>&1

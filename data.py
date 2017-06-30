@@ -1,19 +1,19 @@
 from __future__ import print_function, division
 
-import sys
-reload(sys)
-sys.setdefaultencoding("utf-8")
-
 import pickle
 import numpy as np
 from collections import defaultdict
 
+import sys
+reload(sys)
+sys.setdefaultencoding("utf-8")
+
 
 def save_dic(file, dic):
     """Save dictionary to file
-    
+
     Converts defaultdict to dict to prevent pickling error
-    
+
     Arguments:
         file (str): File path
         dic (defaultdict): Dictionary to save
@@ -24,10 +24,10 @@ def save_dic(file, dic):
 
 def load_dic(file):
     """Load dictionary from file
-    
+
     Arguments:
         file (str): File path
-    
+
     Returns:
         defaultdict: Loaded dictionary
     """
@@ -41,12 +41,12 @@ def load_dic(file):
 
 def reverse_dic(dic):
     """Get the inverse mapping from an injective dictionary
-    
+
     dic[key] = value <==> reverse_dic(dic)[value] = key
-    
+
     Args:
         dic (defaultdict): Dictionary to reverse
-    
+
     Returns:
         defaultdict: Reversed dictionary
     """
@@ -58,14 +58,15 @@ def reverse_dic(dic):
 
 def read_dic(file, max_size=20000, min_freq=1):
     """Read dictionary from corpus
-    
+
     Args:
         file (str): [description]
 
     Keyword Arguments:
-        max_size (int): Only the top max_size words (by frequency) are stored, the rest is UNKed (default: {20000})
+        max_size (int): Only the top max_size words (by frequency) are stored,
+            the rest is UNKed (default: {20000})
         min_freq (int): Disregard words with frequency <= min_freq (default: {1})
-    
+
     Returns:
         Dictionary
         defaultdict
@@ -80,7 +81,7 @@ def read_dic(file, max_size=20000, min_freq=1):
                 freqs[word] += 1
 
     sorted_words = sorted(freqs.items(), key=lambda x: x[1], reverse=True)
-    for i in range(max_size):
+    for i in range(min(max_size, len(sorted_words))):
         word, freq = sorted_words[i]
         if freq <= min_freq:
             continue
@@ -91,13 +92,13 @@ def read_dic(file, max_size=20000, min_freq=1):
 
 def read_corpus(file, dic):
     """Read corpus in list of sentences
-    
+
     Each sentence is a list of integers (determined by dic)
-    
+
     Args:
         file (str): Corpus file path
         dic (defaultdict): Dictionary for the str -> int conversion
-    
+
     Returns:
         Corpus
         list
@@ -115,15 +116,17 @@ def read_corpus(file, dic):
             sentences.append(sent)
     return sentences
 
+
 class BatchLoader(object):
     """Iterator used to load batches
-    
-    Batches are predetermined so that each batch has only source sentence of the same length (easier for minibatching)
+
+    Batches are predetermined so that each batch has only source sentence
+    of the same length (easier for minibatching)
     """
 
     def __init__(self, datas, datat, bsize):
         """Constructor
-        
+
         Args:
             datas (list): Source corpus
             datat (list): Target corpus
@@ -159,11 +162,11 @@ class BatchLoader(object):
 
     def next(self):
         """Get next batch
-        
+
         Returns:
             (source batch, target batch)
             tuple
-        
+
         Raises:
             StopIteration: When all batches have been seen. Also resshuffles the batches
         """
@@ -178,4 +181,5 @@ class BatchLoader(object):
         """
         return self.next()
 
-    def __iter__(self): return self
+    def __iter__(self):
+        return self
