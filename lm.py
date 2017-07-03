@@ -2,9 +2,11 @@ from __future__ import division, print_function
 
 import numpy as np
 import dynet as dy
+from scipy import sparse as sp
 
 from collections import defaultdict
 import pickle
+
 
 class LanguageModel(object):
     def p_next(self, sent):
@@ -62,11 +64,14 @@ class UnigramLanguageModel(LanguageModel):
     def load(self, filename):
         self.unigrams = np.load(filename)
 
+
 def zero():
     return 0.0
 
+
 def dd():
     return defaultdict(zero)
+
 
 class BigramLanguageModel(LanguageModel):
     def __init__(self, w2id, alpha=0.0, eps=0):
@@ -74,17 +79,14 @@ class BigramLanguageModel(LanguageModel):
         self.eps = eps
         self.alpha = alpha
         self.unigrams = np.ones(len(self.w2id)) / len(self.w2id)
-        self.bigrams = defaultdict(dd)
-    
+        self.bigrams = sp.coo_matrix((len(self.w2id), len(self.w2id)), dtype=float)
+
     def init(self):
         self.u_e = dy.inputTensor(self.unigrams)
 
     def p_next(self, sent):
-        pw = sent#[s[-1] for s in sent]
-        b_p = np.zeros((len(self.w2id), len(pw)))
-        for i, w in enumerate(pw):
-            for k, v in self.bigrams[w].items():
-                b_p[k, i] = v
+        pw = sent  # [s[-1] for s in sent]
+        b_p = self.bigrams[pw].toarray().T
         return b_p
 
     def p_next_expr(self, sent):
@@ -97,22 +99,28 @@ class BigramLanguageModel(LanguageModel):
             for w in sent:
                 self.unigrams[w] += 1
         self.unigrams /= self.unigrams.sum()
-        # Learn bigrams
+        # Learn bigrams+
+        bigrams = defaultdict(dd)
         for sent in corpus:
             for w, w_next in zip(sent[:-1], sent[1:]):
-                self.bigrams[w][w_next] += 1
-        for k, v in self.bigrams.items():
+                bigrams[w][w_next] += 1
+        data, x, y = [], [], []
+        for k, v in bigrams.items():
             s = sum(map(lambda x: x[1], v.items()))
             for w in v.keys():
-                self.bigrams[k][w] /= s
-        
+                bigrams[k][w] /= s
+                data.append(bigrams[k][w])
+                x.append(k)
+                y.append(w)
+        V = len(self.w2id)
+        self.bigrams = sp.csr_matrix((data, (x, y)), shape=(V, V), dtype=float)
 
     def save(self, filename):
         np.save(filename + '_unigrams', self.unigrams)
+        sp.save_npz(filename + '_bigrams', self.bigrams)
         with open(filename + '_bigrams', 'wb+') as f:
             pickle.dump(self.bigrams, f)
 
     def load(self, filename):
-        self.unigrams = np.load(filename + '_unigrams')
-        with open(filename + '_bigrams', 'rb') as f:
-            self.bigrams = pickle.load(f)
+        self.unigrams = np.load(filename + '_unigrams.npy')
+        self.bigrams = np.load_npz(filename + '_bigrams.npz')

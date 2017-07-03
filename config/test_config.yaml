@@ -19,6 +19,8 @@ gradient_clip: 1.0
 trainer: sgd
 output_dir: output
 min_freq: 5
+label_smoothing: 0.1
+language_model: bigram
 train:
   train: True
   train_dst: en-de/train.en-de.low.filt.en
