@@ -5,10 +5,10 @@
 #SBATCH --mem=10g
 #SBATCH -t 0
 source ~/.bashrc
-EN=best
+EN=best_bias
 CFG_FILE=temp/`uuidgen`.yaml
 cp config/best_config.yaml $CFG_FILE
 # Training
-python run.py -c $CFG_FILE -e train --exp_name $EN > output/log_${EN}.txt 2>&1
+#python run.py -c $CFG_FILE -e train --exp_name $EN > output/log_${EN}.txt 2>&1
 # Testing
 python run.py -c $CFG_FILE -e test --exp_name $EN >> output/log_${EN}.txt 2>&1

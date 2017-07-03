@@ -78,8 +78,9 @@ def get_language_model(opt, train_data, w2id, test=False):
     if opt.language_model == 'uniform':
         return None
     elif opt.language_model == 'unigram':
-        print('Using unigram lm')
         lang_model = lm.UnigramLanguageModel(w2id)
+    elif opt.language_model == 'bigram':
+        lang_model = lm.BigramLanguageModel(w2id)
     else:
         print('Unknown language model %s, using unigram language model' % opt.language_model)
         lang_model = lm.UnigramLanguageModel(w2id)

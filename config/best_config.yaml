@@ -1,5 +1,5 @@
 dynet_seed: 314159
-dynet_mem: 3000
+dynet_mem: 5000
 dynet_gpu: True
 dynet_autobatch: 1
 encoder: bilstm
@@ -12,7 +12,7 @@ hidden_dim: 512
 max_len: 80
 dropout_rate: 0.4
 word_dropout_rate: 0.1
-label_smoothing: 0.0
+label_smoothing: 0.1
 output_dir: output
 language_model: uniform
 src_vocab_size : 50000
