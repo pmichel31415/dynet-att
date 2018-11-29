@@ -1,0 +1,5 @@
+dynet>=2.1
+sacremoses
+sacrebleu
+sentencepiece>=0.1.6
+git+https://github.com/pmichel31415/dynn
