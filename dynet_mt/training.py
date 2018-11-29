@@ -44,7 +44,7 @@ def train_epoch(epoch, model, objective, optimizer, train_batches, log=None):
             ppl = np.exp(running_loss)
             log(
                 f"Epoch {epoch+1}@{train_batches.percentage_done():.0f}%: "
-                f"loss={running_loss:.3f} ppl={np.exp(ppl):.2f}"
+                f"loss={running_loss:.3f} ppl={ppl:.2f}"
             )
             running_loss = n_processed = 0
 
