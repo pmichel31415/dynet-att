@@ -1,0 +1,30 @@
+# General arguments
+exp_name: iwslt_bilstm
+verbose: True
+output_dir: "output"
+# Tokenization
+tokenizer_type: subword
+subword_algo: unigram
+subword_train_files:
+  - datasets/iwslt/iwslt2016.fr-en/train.fr-en.fr
+  - datasets/iwslt/iwslt2016.fr-en/train.fr-en.en
+subword_voc_size: 16000
+# Model
+architecture: medium_bilstm
+# Training specific arguments
+train:
+  task: train
+  # Tokenizer args
+  train_src: datasets/iwslt/iwslt2016.fr-en/train.fr-en.fr
+  train_tgt: datasets/iwslt/iwslt2016.fr-en/train.fr-en.en
+  valid_src: datasets/iwslt/iwslt2016.fr-en/tst2013.fr-en.fr
+  valid_tgt: datasets/iwslt/iwslt2016.fr-en/tst2013.fr-en.en
+  # Optimization args
+  objective: nll
+  label_smoothing: 0.1
+  trainer: adam
+  learning_rate: 0.001
+  learning_rate_decay: 0.5
+  gradient_clip: 5.0
+  max_tokens_per_batch: 2000
+  valid_batch_size: 10
