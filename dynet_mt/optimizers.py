@@ -68,13 +68,11 @@ def trainer_from_args(args, pc):
         trainer = dy.AdamTrainer(
             pc,
             alpha=args.learning_rate,
-            beta1=args.momentum
         )
     elif args.trainer == "amsgrad":
         trainer = dy.AdamTrainer(
             pc,
             alpha=args.learning_rate,
-            beta1=args.momentum
         )
     return trainer
 
