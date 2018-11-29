@@ -26,7 +26,7 @@ train:
   num_epochs: 10
   batch_size: 32
   patience: 2
-  dev_batch_size: 10
+  valid_batch_size: 10
   check_train_error_every: 100
   check_valid_error_every: 2500
   valid_bleu_every: 2500
@@ -44,7 +44,7 @@ tune:
   num_epochs: 10
   batch_size: 32
   patience: 2
-  dev_batch_size: 10
+  valid_batch_size: 10
   check_train_error_every: 100
   check_valid_error_every: 2500
   valid_bleu_every: 2500
