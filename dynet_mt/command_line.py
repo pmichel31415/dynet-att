@@ -120,6 +120,10 @@ def add_optimization_args(parser):
                              "means no clipping")
     optim_group.add_argument("--learning-rate", type=float, default=1.0)
     optim_group.add_argument("--learning-rate-decay", type=float, default=1.0)
+    optim_group.add_argument("--learning-rate-schedule", type=str,
+                             choices=["constant", "inverse_sqrt"],
+                             default="constant",)
+    optim_group.add_argument("--learning-rate-warmup", type=int, default=1.0)
     optim_group.add_argument("--momentum", type=float, default=0.0)
     optim_group.add_argument("--report-every", type=int, default=100,
                              help="Check train error every")

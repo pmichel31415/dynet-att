@@ -42,19 +42,19 @@ dynet_trainers = {
 
 
 def lr_schedule_from_args(args):
-    schedule_name = getattr(args, "lr_schedule", "constant")
+    schedule_name = args.learning_rate_schedule
     if schedule_name == "constant":
         def constant_schedule():
             while True:
                 yield args.learning_rate
         return constant_schedule()
     elif schedule_name == "inverse_sqrt":
-        warmup = getattr(args, "lr_warmup", 0.1)  # default to no warmup
+        warmup = args.learning_rate_warmup  # default to no warmup
         return dynn.training.inverse_sqrt_schedule(warmup, args.learning_rate)
 
 
 def trainer_from_args(args, pc):
-    momentum = getattr(args, "momentum", 0)
+    momentum = args.momentum
     if args.trainer == "sgd":
         if momentum:
             trainer = dy.MomentumSGDTrainer(

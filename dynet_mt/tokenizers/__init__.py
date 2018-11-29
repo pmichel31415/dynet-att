@@ -31,14 +31,15 @@ def add_tokenizer_args(tokenizer_type, parser):
 
 def tokenizer_from_args(args):
     """Return a tokenizer from command line arguments"""
-    tokenizer_type = getattr(args, "tokenizer_type", "space")
-    assert_tokenizer_type_supported(tokenizer_type)
+    # Check that the tokenizer type is valid
+    assert_tokenizer_type_supported(args.tokenizer_type)
+    # Set the file to its default name
     if args.tokenizer_file is None:
         tokenizer_file = default_filename(args, "tokenizer")
     # Load the tokenizer if it exists
     if os.path.isfile(tokenizer_file):
-        return tokenizer_types[tokenizer_type].load(tokenizer_file)
+        return tokenizer_types[args.tokenizer_type].load(tokenizer_file)
     else:
-        tokenizer = tokenizer_types[tokenizer_type].from_args(args)
+        tokenizer = tokenizer_types[args.tokenizer_type].from_args(args)
         tokenizer.save(tokenizer_file)
         return tokenizer
