@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import os.path
 from .space_tokenizer import SpaceTokenizer
 from .moses_tokenizer import MosesTokenizer
 from .subword_tokenizer import SubwordTokenizer
@@ -33,10 +33,12 @@ def tokenizer_from_args(args):
     """Return a tokenizer from command line arguments"""
     tokenizer_type = getattr(args, "tokenizer_type", "space")
     assert_tokenizer_type_supported(tokenizer_type)
-    if args.tokenizer_file:
-        return tokenizer_types[tokenizer_type].load(args.tokenizer_file)
+    if args.tokenizer_file is None:
+        tokenizer_file = default_filename(args, "tokenizer")
+    # Load the tokenizer if it exists
+    if os.path.isfile(tokenizer_file):
+        return tokenizer_types[tokenizer_type].load(tokenizer_file)
     else:
         tokenizer = tokenizer_types[tokenizer_type].from_args(args)
-        tokenizer_file = default_filename(args, "tokenizer")
         tokenizer.save(tokenizer_file)
         return tokenizer
