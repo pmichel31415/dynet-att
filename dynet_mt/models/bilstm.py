@@ -193,7 +193,7 @@ class AttBiLSTM(BaseSeq2Seq):
     def initial_decoder_state(self):
         return self.dec_cell.initial_value(1)
 
-    def embed(self, word, tgt=False):
+    def embed_word(self, word, tgt=False):
         if tgt:
             return self.tgt_embed(word)
         else:
