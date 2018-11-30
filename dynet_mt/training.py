@@ -44,12 +44,12 @@ def train_epoch(epoch, model, objective, optimizer, train_batches, log=None):
         if train_batches.just_passed_multiple(ceil(len(train_batches) / 10)):
             running_loss /= n_processed
             ppl = np.exp(running_loss)
-            elapsed = start - time.time()
+            elapsed = time.time() - start
             tok_per_s = n_processed / elapsed
             log(
-                f"Epoch {epoch+1}@{train_batches.percentage_done():.0f}%: "
+                f"Epoch {epoch}@{train_batches.percentage_done():.0f}%: "
                 f"loss={running_loss:.3f} ppl={ppl:.2f} "
-                f"({elapsed:.1f}s, {n_tok_per_s:.1f} tok/s)"
+                f"({elapsed:.1f}s, {tok_per_s:.1f} tok/s)"
             )
             running_loss = n_processed = 0
             start = time.time()

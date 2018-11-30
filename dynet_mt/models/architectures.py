@@ -57,6 +57,18 @@ architectures = {
         "tie_decoder_embeds": True,
         "tie_all_embeds": False,
     },
+    # Transformers
+    "medium_transformer": {
+        # This one is for testing
+        "class": Transformer,
+        "n_layers": 4,
+        "embed_dim": 512,
+        "hidden_dim": 512,
+        "n_heads": 4,
+        "dropout": 0.3,
+        "tie_decoder_embeds": True,
+        "tie_all_embeds": False,
+    },
 }
 supported_architectures = list(architectures.keys())
 

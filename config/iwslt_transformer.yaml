@@ -10,7 +10,7 @@ subword_train_files:
   - datasets/iwslt/iwslt2016.fr-en/train.fr-en.en
 subword_voc_size: 16000
 # Model
-architecture: small_transformer
+architecture: medium_transformer
 # Training specific arguments
 train:
   task: train
@@ -20,10 +20,13 @@ train:
   valid_src: datasets/iwslt/iwslt2016.fr-en/tst2013.fr-en.fr
   valid_tgt: datasets/iwslt/iwslt2016.fr-en/tst2013.fr-en.en
   # Optimization args
+  n_epochs: 20
   objective: nll
   label_smoothing: 0.1
   trainer: adam
-  learning_rate: 0.001
+  learning_rate_schedule: inverse_sqrt
+  learning_rate_warmup: 4000
+  learning_rate: 0.04
   learning_rate_decay: 0.5
   gradient_clip: 5.0
   max_tokens_per_batch: 2000
