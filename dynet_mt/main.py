@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from .command_line import parse_and_get_args
+from .command_line import parse_and_get_args, print_config
 from .training import train, sanitize_training_args
 from .data import prepare_training_data, prepare_training_batches
 from .models import model_from_args
@@ -17,6 +17,7 @@ def main():
         log = Logger(verbose=args.verbose, out_file=args.log_file)
         # Sanitize arguments
         args = sanitize_training_args(args)
+        print_config(args, log=log)
         # Get tokenizer (might need to train it if it's a subword model)
         tok = tokenizer_from_args(args)
         # Load, tokenize and numberize data

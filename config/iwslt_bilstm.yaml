@@ -20,11 +20,13 @@ train:
   valid_src: datasets/iwslt/iwslt2016.fr-en/tst2013.fr-en.fr
   valid_tgt: datasets/iwslt/iwslt2016.fr-en/tst2013.fr-en.en
   # Optimization args
+  n_epochs: 10
   objective: nll
   label_smoothing: 0.1
   trainer: adam
   learning_rate: 0.001
   learning_rate_decay: 0.5
   gradient_clip: 5.0
+  batch_size: 64
   max_tokens_per_batch: 2000
   valid_batch_size: 10

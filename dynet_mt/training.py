@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from math import ceil
+import time
 
 import numpy as np
 import dynet as dy
@@ -20,6 +21,7 @@ def sanitize_training_args(args):
 
 def train_epoch(epoch, model, objective, optimizer, train_batches, log=None):
     log = log or Logger()
+    start = time.time()
     running_loss = n_processed = 0
     for src, tgt in train_batches:
         # Renew the computation graph
@@ -42,11 +44,15 @@ def train_epoch(epoch, model, objective, optimizer, train_batches, log=None):
         if train_batches.just_passed_multiple(ceil(len(train_batches) / 10)):
             running_loss /= n_processed
             ppl = np.exp(running_loss)
+            elapsed = start - time.time()
+            tok_per_s = n_processed / elapsed
             log(
                 f"Epoch {epoch+1}@{train_batches.percentage_done():.0f}%: "
-                f"loss={running_loss:.3f} ppl={ppl:.2f}"
+                f"loss={running_loss:.3f} ppl={ppl:.2f} "
+                f"({elapsed:.1f}s, {n_tok_per_s:.1f} tok/s)"
             )
             running_loss = n_processed = 0
+            start = time.time()
 
 
 def eval_ppl(model, eval_batches, log=None):
@@ -110,6 +116,7 @@ def train(
         train_epoch(epoch, model, objective, optimizer, train_batches, log)
         # Validate
         valid_ppl = eval_ppl(model, valid_batches, log)
+        log(f"Epoch {epoch}: validation ppl {valid_ppl:.1f}")
         # Early stopping
         if valid_ppl < best_ppl:
             deadline = 0
