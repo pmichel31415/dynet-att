@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from .bilstm import AttBiLSTM
+from .transformer import Transformer
 
 architectures = {
     # BiLSTM architectures
@@ -29,6 +30,18 @@ architectures = {
         "embed_dim": 256,
         "hidden_dim": 512,
         "dropout": 0.2,
+        "tie_decoder_embeds": True,
+        "tie_all_embeds": False,
+    },
+    # Transformers
+    "test_transformer": {
+        # This one is for testing
+        "class": Transformer,
+        "n_layers": 2,
+        "embed_dim": 4,
+        "hidden_dim": 4,
+        "n_heads": 2,
+        "dropout": 0.1,
         "tie_decoder_embeds": True,
         "tie_all_embeds": False,
     },

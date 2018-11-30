@@ -25,7 +25,7 @@ class TestMain(TestCase):
         shutil.rmtree(self.path)
         sys.argv = self.actual_sysargs[:]
 
-    def test_train(self):
+    def test_train_bilstm(self):
         train_src = os.path.join(self.data_folder, "train.ja")
         train_tgt = os.path.join(self.data_folder, "train.en")
         valid_src = os.path.join(self.data_folder, "valid.ja")
@@ -48,6 +48,35 @@ class TestMain(TestCase):
             "--valid-tgt", valid_tgt,
             # Model args
             "--architecture", "test_bilstm",
+            # Optimization args
+            "--batch-size", "2",
+            "--valid-batch-size", "2",
+        ])
+        main.main()
+
+    def test_train_transformer(self):
+        train_src = os.path.join(self.data_folder, "train.ja")
+        train_tgt = os.path.join(self.data_folder, "train.en")
+        valid_src = os.path.join(self.data_folder, "valid.ja")
+        valid_tgt = os.path.join(self.data_folder, "valid.en")
+        sys.argv.extend([
+            # General args
+            "--task", "train",
+            "--exp-name", "test",
+            "--output-dir", self.path,
+            "--verbose",
+            # Tokenizer args
+            "--tokenizer-type", "subword",
+            "--subword-algo", "unigram",
+            "--subword-train-files", train_src, train_tgt,
+            "--subword-voc-size", "1000",
+            # Data args
+            "--train-src", train_src,
+            "--train-tgt", train_tgt,
+            "--valid-src", valid_src,
+            "--valid-tgt", valid_tgt,
+            # Model args
+            "--architecture", "test_transformer",
             # Optimization args
             "--batch-size", "2",
             "--valid-batch-size", "2",

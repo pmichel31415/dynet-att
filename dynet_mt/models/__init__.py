@@ -2,12 +2,13 @@
 from dynn import io
 
 from .bilstm import AttBiLSTM
+from .transformer import Transformer
 from ..util import default_filename
 
 from .architectures import architecture_from_args
 
 
-model_types = {"bilstm": AttBiLSTM}
+model_types = {"bilstm": AttBiLSTM, "transformer": Transformer}
 supported_model_types = list(model_types.keys())
 
 
