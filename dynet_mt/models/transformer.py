@@ -53,11 +53,12 @@ class Transformer(BaseSeq2Seq):
             E_src = None
         self.src_embed = Embeddings(self.pc, dic_src, embed_dim, params=E_src)
         # Position embeddings
-        self.pos_embeds = sin_embeddings(2000, hidden_dim, transposed=True)
+        self.pos_embeds = sin_embeddings(2000, embed_dim, transposed=True)
         # Encoder transformer
         self.enc = StackedTransformers(
             self.pc,
             n_layers,
+            embed_dim,
             hidden_dim,
             n_heads,
             dropout=dropout
@@ -74,22 +75,23 @@ class Transformer(BaseSeq2Seq):
             E_tgt = self.pc.add_parameters((self.V_tgt, embed_dim), init=init)
         else:
             E_tgt = None
-        self.tgt_embed = Embeddings(self.pc, dic_tgt, hidden_dim, params=E_tgt)
+        self.tgt_embed = Embeddings(self.pc, dic_tgt, embed_dim, params=E_tgt)
         # Start of sentence embedding
-        self.sos_p = self.pc.add_lookup_parameters((1, hidden_dim, 1))
+        self.sos_p = self.pc.add_lookup_parameters((1, embed_dim, 1))
         # Transformer
         self.dec = StackedCondTransformers(
             self.pc,
             n_layers,
+            embed_dim,
             hidden_dim,
-            hidden_dim,
+            embed_dim,
             n_heads,
             dropout=dropout
         )
         # Projection to logits
         self.project = Sequential(
             # First project to embedding dim
-            Affine(self.pc, hidden_dim, embed_dim),
+            Affine(self.pc, embed_dim, embed_dim),
             # Then logit layer with weights tied to the word embeddings
             Affine(self.pc, embed_dim, self.V_tgt, dropout=dropout, W_p=E_tgt)
         )
@@ -98,8 +100,8 @@ class Transformer(BaseSeq2Seq):
     def add_args(parser):
         bilstm_group = parser.add_argument_group("BiLSTM")
         bilstm_group.add_argument("--n-layers", type=int, default=4)
-        bilstm_group.add_argument("--embed-dim", type=int, default=512)
-        bilstm_group.add_argument("--hidden-dim", type=int, default=512)
+        bilstm_group.add_argument("--embed-dim", type=int, default=256)
+        bilstm_group.add_argument("--hidden-dim", type=int, default=1024)
         bilstm_group.add_argument("--n-heads", type=int, default=4)
         bilstm_group.add_argument("--dropout", type=float, default=0.2)
         bilstm_group.add_argument("--tie-decoder-embeds", action="store_true")
@@ -129,7 +131,7 @@ class Transformer(BaseSeq2Seq):
     def encode(self, src):
         # Embed input words
         src_embs = self.src_embed(src.sequences, length_dim=1)
-        src_embs = src_embs * np.sqrt(self.hidden_dim)
+        src_embs = src_embs * np.sqrt(self.embed_dim)
         # Add position encodings
         src_embs += dy.inputTensor(self.pos_embeds[:, :src.max_length])
         # Encode
@@ -167,7 +169,7 @@ class Transformer(BaseSeq2Seq):
         sos_embed = self.sos_p.batch([0] * tgt.batch_size)
         tgt_embs = dy.concatenate([sos_embed, tgt_embs], d=1)
         # Scale embeddings
-        tgt_embs = tgt_embs * np.sqrt(self.hidden_dim)
+        tgt_embs = tgt_embs * np.sqrt(self.embed_dim)
         # Add positional encoding (tgt_embs has shape ``dh x L``)
         tgt_embs += dy.inputTensor(self.pos_embeds[:, :L])
         # Decode (h_dec has shape ``dh x L``)
