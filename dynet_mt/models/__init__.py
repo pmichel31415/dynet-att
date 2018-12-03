@@ -30,12 +30,13 @@ def model_from_args(args, dic_src, dic_tgt):
     """Return a model from command line arguments"""
     # Check if we should produce an existing architecture
     if getattr(args, "architecture", None) is not None:
-        return architecture_from_args(args, dic_src, dic_tgt)
-    # Check model type
-    model_type = args.model_type
-    assert_model_type_supported(model_type)
-    # Build model
-    model = model_types[model_type].from_args(args, dic_src, dic_tgt)
+        model = architecture_from_args(args, dic_src, dic_tgt)
+    else:
+        # Check model type
+        model_type = args.model_type
+        assert_model_type_supported(model_type)
+        # Build model
+        model = model_types[model_type].from_args(args, dic_src, dic_tgt)
     # Load model maybe
     if args.pretrained_model:
         if args.model_load_file is None:

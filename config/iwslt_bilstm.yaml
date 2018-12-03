@@ -2,6 +2,8 @@
 exp_name: iwslt_bilstm
 verbose: True
 output_dir: "output"
+src_lang: fr
+tgt_lang: en
 # Tokenization
 tokenizer_type: subword
 subword_algo: unigram
@@ -30,6 +32,11 @@ train:
   batch_size: 64
   max_tokens_per_batch: 2000
   valid_batch_size: 10
+eval_ppl:
+  task: eval_ppl
+  eval_src: datasets/iwslt/iwslt2016.fr-en/tst2013.fr-en.fr
+  eval_tgt: datasets/iwslt/iwslt2016.fr-en/tst2013.fr-en.en
+  eval_batch_size: 32
 translate:
   task: translate
   trans_src: datasets/iwslt/iwslt2016.fr-en/tst2014.fr-en.fr
