@@ -24,8 +24,15 @@ train:
   # Optimization args
   batch_size: 2
   valid_batch_size: 2
-test:
-  test: True
-  test_src: tests/data/valid.ja
-  test_dst: tests/data/valid.en
+eval_ppl:
+  task: eval_ppl
+  eval_src: tests/data/valid.ja
+  eval_tgt: tests/data/valid.en
+  eval_batch_size: 2
+translate:
+  task: translate
+  trans_src: tests/data/valid.ja
+  trans_batch_size: 2
   beam_size: 2
+  max_len: 3
+

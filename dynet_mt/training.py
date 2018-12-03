@@ -9,14 +9,6 @@ from dynn import io
 from .util import Logger
 from .evaluation import bleu_score
 from .objectives import NLLObjective
-from .util import default_filename
-
-
-def sanitize_training_args(args):
-    # Set default output files
-    if args.model_save_file is None:
-        args.model_save_file = default_filename(args, "model.npz")
-    return args
 
 
 def train_epoch(epoch, model, objective, optimizer, train_batches, log=None):
@@ -95,6 +87,29 @@ def eval_bleu(translator, eval_batches, src_words, tgt_words, detok, log=None):
     # BLEU
     bleu = bleu_score(hyps, refs)
     return bleu
+
+
+def translate(translator, eval_batches, src_words, log=None):
+    """Translate a batch of source sentences (tokenized and numberized)"""
+    log = log or Logger()
+    src_words = np.asarray(src_words)
+    hyps = np.empty(len(src_words), dtype=str)
+    # Generate from the source data
+    for src in eval_batches:
+        # Retrieve original source and target words
+        batch_src_words = src_words[src.original_idxs]
+        # Translate
+        hyp_sents = translator(src, src_words=batch_src_words)
+        # Record hypotheses
+        hyps[src.original_idxs] = hyp_sents
+    return hyps
+
+
+def translate_sents_itr(translator, src_sents, log=None):
+    """Translate a list of sentences"""
+    log = log or Logger()
+    for src_sent in src_sents:
+        yield translator(src_sent)
 
 
 def train(
