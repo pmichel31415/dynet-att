@@ -68,17 +68,24 @@ class BeamSearch(Decoding):
         # Start decoding
         while not beams[-1]["is_over"] and len(beams[-1]["words"]) < max_len:
             new_beams = []
-            for beam in beams:
+            active_idxs = [idx for idx, beam in enumerate(beams)
+                           if not beam["is_over"]]
+            active = [beams[idx] for idx in active_idxs]
+            states, log_ps, aligns = model.decode_step(
+                X,
+                dy.concatenate_to_batch([beam["wemb"] for beam in active]),
+                model.batch_states([beam["state"]for beam in active]),
+                attn_mask,
+            )
+            for b_i, beam in enumerate(beams):
                 # Don't do anything if the beam is over
                 if beam["is_over"]:
+                    new_beams.append(beam)
                     continue
-                # Call the model decoder step
-                state, log_p, align = model.decode_step(
-                    X,
-                    beam["wemb"],
-                    beam["state"],
-                    attn_mask
-                )
+                # Retrieve log_p, alignement and state for this beam
+                log_p = log_ps[active_idxs[b_i]]
+                align = aligns[active_idxs[b_i]]
+                state = model.pick_state_batch_elem(states, active_idxs[b_i])
                 # top k words
                 next_words = log_p.argsort()[-self.beam_size:]
                 # Add to new beam

@@ -153,6 +153,23 @@ class Transformer(BaseSeq2Seq):
     def initial_decoder_state(self):
         return None
 
+    def batch_states(self, states):
+        if states[0] is None:
+            return None
+        else:
+            batched_states = []
+            for state_expressions in zip(*states):
+                batched = dy.concatenate_to_batch(list(state_expressions))
+                batched_states.append(batched)
+            return batched_states
+
+    def pick_state_batch_elem(self, batched_states, b):
+        if batched_states is None:
+            return None
+        else:
+            return [dy.pick_batch_elem(batched_state, b)
+                    for batched_state in batched_states]
+
     def __call__(self, src, tgt):
         # Encode
         # ------
@@ -180,6 +197,7 @@ class Transformer(BaseSeq2Seq):
         return [dy.pick(logits, index=pos, dim=1) for pos in range(L)]
 
     def decode_step(self, X, wemb, state, attn_mask=None):
+        bsz = wemb.dim()[1]
         # Run one step of the decoder
         new_state, h, _, attn_weights = self.dec.step(
             state,
@@ -189,9 +207,11 @@ class Transformer(BaseSeq2Seq):
             return_att=True
         )
         # Get log_probs
-        log_p = dy.log_softmax(self.project(h)).npvalue()
+        log_p = dy.log_softmax(self.project(h)).npvalue().reshape(-1, bsz)
         # Alignments from attention (average weights from each head)
-        align = dy.average(attn_weights).npvalue()[:, -1].argmax()
+        avg_attn = dy.average(attn_weights)
+        attn_values = avg_attn.npvalue()[:, -1].reshape(-1, bsz)
+        align = attn_values.argmax(axis=0)
         # Return
         return new_state, log_p, align
 

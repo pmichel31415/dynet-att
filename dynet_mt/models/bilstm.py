@@ -193,6 +193,17 @@ class AttBiLSTM(BaseSeq2Seq):
     def initial_decoder_state(self):
         return self.dec_cell.initial_value(1)
 
+    def batch_states(self, states):
+        batched_states = []
+        for state_expressions in zip(*states):
+            batched = dy.concatenate_to_batch(list(state_expressions))
+            batched_states.append(batched)
+        return batched_states
+
+    def pick_state_batch_elem(self, batched_states, b):
+        return [dy.pick_batch_elem(batched_state, b)
+                for batched_state in batched_states]
+
     def embed_word(self, word, tgt=False):
         if tgt:
             return self.tgt_embed(word)
@@ -200,6 +211,7 @@ class AttBiLSTM(BaseSeq2Seq):
             return self.src_embed(word)
 
     def decode_step(self, X, wemb, state, attn_mask=None):
+        bsz = wemb.dim()[1]
         prev_h = self.dec_cell.get_output(state)
         query = dy.concatenate([wemb, prev_h])
         # Attend
@@ -212,8 +224,9 @@ class AttBiLSTM(BaseSeq2Seq):
         # Save output
         h = self.dec_cell.get_output(dec_state)
         # Get log_probs
-        log_p = dy.log_softmax(self.project(h)).npvalue()
+        log_ps = dy.log_softmax(self.project(h)).npvalue().reshape(-1, bsz)
         # alignments from attention
-        align = attn_weights.npvalue().argmax()
+        attn_values = attn_weights.npvalue().reshape(-1, bsz)
+        align = attn_values.argmax(axis=0).reshape(-1, bsz)
         # Return
-        return dec_state, log_p, align
+        return dec_state, log_ps, align
