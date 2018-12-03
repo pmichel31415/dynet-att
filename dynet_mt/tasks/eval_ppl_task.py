@@ -87,12 +87,7 @@ class EvalPPLTask(BaseTask):
             default_value=default_filename(self.args, "dic.tgt"),
             log=self.log
         )
-        set_default_arg(
-            self.args,
-            key="pretrained_model",
-            default_value=True,
-            log=self.log,
-        )
+        self.args.pretrained_model = True
 
     def get_logger(self):
         return Logger(verbose=self.args.verbose, out_file=self.args.log_file)
