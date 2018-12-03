@@ -70,6 +70,15 @@ def dictionaries_from_args(args, tok):
     return dic_src, dic_tgt
 
 
+def load_and_tokenize(filename, tok, lang, encoding="utf-8"):
+    data = []
+    with open(filename, "r", encoding=encoding) as f:
+        for line in f:
+            words = tok.tokenize(line.strip(), lang=lang)
+            data.append(words)
+    return data
+
+
 def load_and_numberize(filename, dic, tok, lang, encoding="utf-8"):
     data = []
     with open(filename, "r", encoding=encoding) as f:
@@ -158,6 +167,35 @@ def prepare_eval_batches(args, dataset, dic_src, dic_tgt):
         dic_tgt,
         max_samples=args.eval_batch_size,
         max_tokens=args.max_tokens_per_eval_batch,
+    )
+    return eval_batches
+
+
+def prepare_translate_data(args, tok, log=None):
+    # Log
+    log = log or Logger()
+    # Dictionaries
+    log("Load dictionaries")
+    dic_src, dic_tgt = dictionaries_from_args(args, tok)
+    # Load training data
+    log("Load translation source data")
+    trans_src_words = load_and_tokenize(args.trans_src, tok, args.src_lang)
+    log("Numberize")
+    trans_src = dic_src.numberize(trans_src_words)
+
+    # Return as dictionary
+    data = {"trans_src_words": trans_src_words, "trans_src": trans_src}
+    # Return
+    return data, dic_src, dic_tgt
+
+
+def prepare_translate_batches(args, dataset, dic_src, dic_tgt):
+    eval_batches = dynn.data.batching.PaddedSequenceBatches(
+        dataset["trans_src"],
+        targets=None,
+        pad_idx=dic_src.pad_idx,
+        max_samples=args.trans_batch_size,
+        max_tokens=args.max_tokens_per_trans_batch,
     )
     return eval_batches
 

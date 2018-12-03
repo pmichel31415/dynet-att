@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import dy
-import np
+import dynet as dy
+import numpy as np
 
 
 class Beam(object):
@@ -93,7 +93,7 @@ class BeamSearch(Decoding):
                         }
                     else:
                         new_beam = {
-                            "wemb": model.embed(word, tgt=True),
+                            "wemb": model.embed_word(word, tgt=True),
                             "state": state,
                             "words": beam["words"] + [word],
                             "score": beam["score"] + log_p[word],

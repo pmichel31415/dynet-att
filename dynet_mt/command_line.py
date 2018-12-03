@@ -71,6 +71,8 @@ def add_translation_args(parser):
                              help="Maximum length of generated sentences")
     trans_group.add_argument("--beam-size", type=int, default=1,
                              help="Beam size for beam search")
+    trans_group.add_argument("--lenpen", type=int, default=0.0,
+                             help="Length penalty for beam search")
     trans_group.add_argument("--replace-unk", action="store_true")
     trans_group.add_argument("--synonyms-file", type=str,
                              help="File with synonyms for each word")

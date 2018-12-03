@@ -2,11 +2,13 @@
 from ..command_line import get_base_parser, parse_args_and_yaml
 
 from .train_task import TrainTask
+from .translate_task import TranslateTask
 from .eval_ppl_task import EvalPPLTask
 
 task_types = {
     "train": TrainTask,
     "eval_ppl": EvalPPLTask,
+    "translate": TranslateTask,
 }
 supported_tasks = list(task_types.keys())
 

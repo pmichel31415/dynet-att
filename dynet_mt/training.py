@@ -89,6 +89,29 @@ def eval_bleu(translator, eval_batches, src_words, tgt_words, detok, log=None):
     return bleu
 
 
+def translate(translator, eval_batches, src_words, log=None):
+    """Translate a batch of source sentences (tokenized and numberized)"""
+    log = log or Logger()
+    src_words = np.asarray(src_words)
+    hyps = np.empty(len(src_words), dtype=str)
+    # Generate from the source data
+    for src in eval_batches:
+        # Retrieve original source and target words
+        batch_src_words = src_words[src.original_idxs]
+        # Translate
+        hyp_sents = translator(src, src_words=batch_src_words)
+        # Record hypotheses
+        hyps[src.original_idxs] = hyp_sents
+    return hyps
+
+
+def translate_sents_itr(translator, src_sents, log=None):
+    """Translate a list of sentences"""
+    log = log or Logger()
+    for src_sent in src_sents:
+        yield translator(src_sent)
+
+
 def train(
     args,
     model,

@@ -30,11 +30,12 @@ class Translator(object):
     def __call__(self, src, src_words=None):
         # Preprocess input
         batch, src_words_ = self.input_to_batch(src)
-        src_words = src_words or src_words_
+        if src_words is None:
+            src_words = src_words_
         # Run the model
         hyp_ids, aligns = self.decoding(self.model, batch)
         # Convert ids to words
-        hyp_words = self.model.dic_tgt.string(hyp_ids, join_with=None)
+        hyp_words = [self.model.dic_tgt.string(hyp) for hyp in hyp_ids]
         # Unk replacement
         if src_words is not None and aligns is not None:
             for b, hyp in enumerate(hyp_words):
