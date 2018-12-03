@@ -29,9 +29,10 @@ class Decoding(object):
 
 class BeamSearch(Decoding):
 
-    def __init__(self, beam_size, lenpen):
+    def __init__(self, beam_size, lenpen, max_len=99999):
         self.beam_size = beam_size
         self.lenpen = lenpen
+        self.max_len = max_len
 
     def __call__(self, model, src):
         dy.renew_cg()
@@ -54,7 +55,7 @@ class BeamSearch(Decoding):
         # Mask for attention
         attn_mask = src.get_mask(base_val=0, mask_val=-np.inf)
         # Max length
-        max_len = 2 * src.max_length
+        max_len = min(2 * src.max_length, self.max_len)
         # Initialize beams
         first_beam = {
             "wemb": model.sos,  # Previous word embedding
@@ -67,7 +68,6 @@ class BeamSearch(Decoding):
         beams = [first_beam]
         # Start decoding
         while not beams[-1]["is_over"] and len(beams[-1]["words"]) < max_len:
-            new_beams = []
             active_idxs = [idx for idx, beam in enumerate(beams)
                            if not beam["is_over"]]
             active = [beams[idx] for idx in active_idxs]
@@ -77,15 +77,13 @@ class BeamSearch(Decoding):
                 model.batch_states([beam["state"]for beam in active]),
                 attn_mask,
             )
-            for b_i, beam in enumerate(beams):
-                # Don't do anything if the beam is over
-                if beam["is_over"]:
-                    new_beams.append(beam)
-                    continue
+            # Carry over inactive beams
+            new_beams = [beam for beam in beams if beam["is_over"]]
+            for b_i, beam in enumerate(active):
                 # Retrieve log_p, alignement and state for this beam
-                log_p = log_ps[active_idxs[b_i]]
-                align = aligns[active_idxs[b_i]]
-                state = model.pick_state_batch_elem(states, active_idxs[b_i])
+                log_p = log_ps[b_i]
+                align = aligns[b_i]
+                state = model.pick_state_batch_elem(states, b_i)
                 # top k words
                 next_words = log_p.argsort()[-self.beam_size:]
                 # Add to new beam
