@@ -84,7 +84,8 @@ def append_eos(data, eos_token):
 
 
 def prepare_training_data(args, tok, log=None):
-    if args.train_data_cache is None:
+    train_data_cache = args.train_data_cache
+    if train_data_cache is None:
         train_data_cache = default_filename(args, "train.cache.bin")
     caching_func = dynn.data.caching.cached_to_file(train_data_cache)
     prepare_func = caching_func(_prepare_training_data)

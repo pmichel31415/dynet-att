@@ -34,7 +34,8 @@ def tokenizer_from_args(args):
     # Check that the tokenizer type is valid
     assert_tokenizer_type_supported(args.tokenizer_type)
     # Set the file to its default name
-    if args.tokenizer_file is None:
+    tokenizer_file = args.tokenizer_file
+    if tokenizer_file is None:
         tokenizer_file = default_filename(args, "tokenizer")
     # Load the tokenizer if it exists
     if os.path.isfile(tokenizer_file):
