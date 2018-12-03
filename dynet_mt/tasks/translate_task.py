@@ -116,7 +116,8 @@ class TranslateTask(BaseTask):
         translator = Translator(
             model,
             BeamSearch(self.args.beam_size, self.args.lenpen),
-            tok
+            tok,
+            replace_unk=self.args.replace_unk,
         )
         # Train
         hyps = translate(

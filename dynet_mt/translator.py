@@ -20,12 +20,14 @@ class Translator(object):
         decoding,
         tokenizer,
         lexicon=None,
+        replace_unk=False,
     ):
 
         self.model = model
         self.decoding = decoding
         self.tok = tokenizer
         self.lex = lexicon
+        self.replace_unk = replace_unk
 
     def __call__(self, src, src_words=None):
         # Preprocess input
@@ -37,7 +39,7 @@ class Translator(object):
         # Convert ids to words
         hyp_words = [self.model.dic_tgt.string(hyp) for hyp in hyp_ids]
         # Unk replacement
-        if src_words is not None and aligns is not None:
+        if self.replace_unk and src_words is not None and aligns is not None:
             for b, hyp in enumerate(hyp_words):
                 hyp_words[b] = self.unk_replace(src_words[b], hyp, aligns[b])
         # Detokenize
