@@ -81,8 +81,8 @@ class BeamSearch(Decoding):
             new_beams = [beam for beam in beams if beam["is_over"]]
             for b_i, beam in enumerate(active):
                 # Retrieve log_p, alignement and state for this beam
-                log_p = log_ps[b_i]
-                align = aligns[b_i]
+                log_p = log_ps[:, b_i]
+                align = aligns[:, b_i]
                 state = model.pick_state_batch_elem(states, b_i)
                 # top k words
                 next_words = log_p.argsort()[-self.beam_size:]
