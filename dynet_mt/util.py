@@ -44,3 +44,10 @@ def default_filename(args, suffix):
 
 def exp_temp_filename(opt, name):
     return opt.temp_dir + '/' + opt.exp_name + '_' + name
+
+
+def set_default_arg(args, key, default_value, if_value=None, log=None):
+    log = log or Logger(False)
+    if getattr(args, key, if_value) == if_value:
+        log(f"Setting \"{key}\" to default value \"{default_value}\"")
+        setattr(args, key, default_value)

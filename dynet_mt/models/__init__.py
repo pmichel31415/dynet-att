@@ -36,9 +36,6 @@ def model_from_args(args, dic_src, dic_tgt):
     assert_model_type_supported(model_type)
     # Build model
     model = model_types[model_type].from_args(args, dic_src, dic_tgt)
-    # Set model file
-    if args.model_save_file is None:
-        setattr(args, "model_save_file", default_filename(args, "model.npz"))
     # Load model maybe
     if args.pretrained_model:
         if args.model_load_file is None:

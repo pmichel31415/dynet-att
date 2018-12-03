@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import os.path
+
 import numpy as np
 import dynn
 
-from .util import Logger, default_filename
+from .util import Logger
 from .tokenizers import SubwordTokenizer
 
 
@@ -37,7 +39,7 @@ def dic_from_subword_vocab(filename):
 
 
 def dictionaries_from_args(args, tok):
-    if args.dic_src:
+    if os.path.isfile(args.dic_src):
         # Load existing dictionary
         dic_src = dynn.data.Dictionary.load(args.dic_src)
     else:
@@ -55,7 +57,7 @@ def dictionaries_from_args(args, tok):
                 min_count=args.min_freq,
                 max_size=args.src_vocab_size
             )
-    if args.dic_tgt:
+    if os.path.isfile(args.dic_tgt):
         dic_tgt = dynn.data.Dictionary.load(args.dic_tgt)
     else:
         dic_tgt = dic_from_data(
@@ -84,19 +86,6 @@ def append_eos(data, eos_token):
 
 
 def prepare_training_data(args, tok, log=None):
-    if args.train_data_cache is None:
-        train_data_cache = default_filename(args, "train.cache.bin")
-    caching_func = dynn.data.caching.cached_to_file(train_data_cache)
-    prepare_func = caching_func(_prepare_training_data)
-    return prepare_func(
-        args,
-        tok,
-        update_cache=args.clear_train_data_cache,
-        log=log
-    )
-
-
-def _prepare_training_data(args, tok, log=None):
     # Log
     log = log or Logger()
     # Dictionaries
@@ -140,6 +129,37 @@ def prepare_training_batches(args, dataset, dic_src, dic_tgt):
         max_tokens=args.max_tokens_per_valid_batch,
     )
     return train_batches, valid_batches
+
+
+def prepare_eval_data(args, tok, log=None):
+    # Log
+    log = log or Logger()
+    # Dictionaries
+    log("Create dictionaries")
+    dic_src, dic_tgt = dictionaries_from_args(args, tok)
+    # Load training data
+    log("Load eval data")
+    eval_src = load_and_numberize(args.eval_src, dic_src, tok, args.src_lang)
+    eval_tgt = load_and_numberize(args.eval_tgt, dic_tgt, tok, args.tgt_lang)
+    # Append EOS
+    eval_tgt = append_eos(eval_tgt, dic_tgt.eos_idx)
+
+    # Return as dictionary
+    data = {"eval_src": eval_src, "eval_tgt": eval_tgt}
+    # Return
+    return data, dic_src, dic_tgt
+
+
+def prepare_eval_batches(args, dataset, dic_src, dic_tgt):
+    eval_batches = dynn.data.batching.SequencePairsBatches(
+        dataset["eval_src"],
+        dataset["eval_tgt"],
+        dic_src,
+        dic_tgt,
+        max_samples=args.eval_batch_size,
+        max_tokens=args.max_tokens_per_eval_batch,
+    )
+    return eval_batches
 
 
 def _prepare_test_data(args, tok, log=None):

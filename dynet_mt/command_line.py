@@ -4,9 +4,9 @@ import argparse
 import yaml
 
 import dynn
-from .models import supported_model_types, add_model_type_args
+from .models import supported_model_types
 from .models.architectures import supported_architectures
-from .tokenizers import supported_tokenizer_types, add_tokenizer_args
+from .tokenizers import supported_tokenizer_types
 
 from .util import Logger
 
@@ -19,51 +19,19 @@ def get_base_parser():
                         default=None, type=str)
     parser.add_argument("--env", help="Environment in the config file",
                         default="train", type=str)
-    parser.add_argument("--task", help="What to do", default="train",
-                        choices=["train", "eval", "translate"])
     parser.add_argument("--log-file", type=str, default=None)
     parser.add_argument("--verbose", action="store_true",
                         help="increase output verbosity")
     parser.add_argument("--exp-name", type=str, default="test",
                         help="Name of the experiment (used so save the model)")
+    parser.add_argument("--output-dir", type=str, default=".",
+                        help="Output directory")
+    parser.add_argument("--temp-dir", type=str, default="temp",
+                        help="Temp directory")
     parser.add_argument("--src-lang", type=str, help="Source language")
     parser.add_argument("--tgt-lang", type=str, help="Target language")
-    return parser
-
-
-def add_data_args(parser):
-    data_group = parser.add_argument_group("Data")
-    # File/folder paths
-    data_group.add_argument("--output-dir", type=str, default=".",
-                            help="Output directory")
-    data_group.add_argument("--temp-dir", type=str, default="temp",
-                            help="Temp directory")
-    data_group.add_argument("--train-src", type=str,
-                            help="Train data in the source language")
-    data_group.add_argument("--train-tgt", type=str,
-                            help="Train data in the target language")
-    data_group.add_argument("--valid-src", type=str,
-                            help="Validation data in the source language")
-    data_group.add_argument("--valid-tgt", type=str,
-                            help="Validation data in the target language")
-    data_group.add_argument("--test-src", type=str,
-                            help="Test data in the source language")
-    data_group.add_argument("--test-tgt", type=str,
-                            help="Test data in the target language")
-    data_group.add_argument("--dic-src", type=str,
-                            help="File containing the dictionary in the source"
-                            " language")
-    data_group.add_argument("--dic-tgt", type=str,
-                            help="File containing the dictionary in the target"
-                            " language")
-    data_group.add_argument("--train-data-cache", type=str,
-                            help="This file will be used to cache the "
-                            "preprocessed training data. If not specified, it "
-                            "will default to [output_dir]/[exp_name].train."
-                            "cache.bin")
-    data_group.add_argument("--clear-train-data-cache", action="store_true",
-                            help="Preprocess the train data again (and update "
-                            "\"--train-data-cache\")")
+    tasks_parsers = parser.add_subparsers(title="Tasks", dest="task")
+    return parser, tasks_parsers
 
 
 def add_preprocessing_args(parser):
@@ -73,6 +41,12 @@ def add_preprocessing_args(parser):
                             help="Maximum vocab size of the source language")
     prep_group.add_argument("--tgt-vocab-size", default=40000, type=int,
                             help="Maximum vocab size of the target language")
+    prep_group.add_argument("--dic-src", type=str,
+                            help="File containing the dictionary in the source"
+                            " language")
+    prep_group.add_argument("--dic-tgt", type=str,
+                            help="File containing the dictionary in the target"
+                            " language")
     prep_group.add_argument("--min-freq", type=int, default=1,
                             help="Minimum frequency under which words are "
                             "unked")
@@ -170,12 +144,12 @@ def add_evaluation_args(parser):
                             "total size)")
 
 
-def parse_args_and_yaml(parser, known_args_only=True):
+def parse_args_and_yaml(parser, known_args_only=True, namespace=None):
     """Parse options from command line arguments and optionally config file"""
     if known_args_only:
-        args = parser.parse_args()
+        args = parser.parse_args(namespace=namespace)
     else:
-        args, _ = parser.parse_known_args()
+        args, _ = parser.parse_known_args(namespace=namespace)
     # Parse config file
     if args.config_file:
         with open(args.config_file, "r") as f:
@@ -210,30 +184,6 @@ def add_to_args(args, dic, known_args_only=True):
             )
         else:
             arg_dict[key] = value
-
-
-def parse_and_get_args():
-    # Get base parser
-    parser = get_base_parser()
-    add_model_args(parser)
-    add_preprocessing_args(parser)
-    add_data_args(parser)
-    # Parse base args (for task, config file, etc)
-    base_args = parse_args_and_yaml(parser, known_args_only=False)
-    # Add task specific arguments
-    if base_args.task == "train":
-        add_optimization_args(parser)
-    elif base_args.task == "eval":
-        add_evaluation_args(parser)
-    elif base_args.task == "translate":
-        add_translation_args(parser)
-    # Add model specific arguments
-    add_model_type_args(base_args.model_type, parser)
-    # Add tokenizers specific arguments
-    add_tokenizer_args(base_args.tokenizer_type, parser)
-    # Then parse again
-    final_args = parse_args_and_yaml(parser, known_args_only=True)
-    return final_args
 
 
 def print_config(args, log=None, **kwargs):

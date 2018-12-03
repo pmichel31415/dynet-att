@@ -9,14 +9,6 @@ from dynn import io
 from .util import Logger
 from .evaluation import bleu_score
 from .objectives import NLLObjective
-from .util import default_filename
-
-
-def sanitize_training_args(args):
-    # Set default output files
-    if args.model_save_file is None:
-        args.model_save_file = default_filename(args, "model.npz")
-    return args
 
 
 def train_epoch(epoch, model, objective, optimizer, train_batches, log=None):
