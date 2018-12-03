@@ -30,3 +30,11 @@ train:
   batch_size: 64
   max_tokens_per_batch: 2000
   valid_batch_size: 10
+translate:
+  task: translate
+  trans_src: datasets/iwslt/iwslt2016.fr-en/tst2014.fr-en.fr
+  trans_batch_size: 1
+  out_file: output/iwslt_bilstm.tst2014.fr-en.out.en
+  max_len: 150
+  beam_size: 4
+  lenpen: 1.0

@@ -94,6 +94,8 @@ def translate(translator, eval_batches, src_words, log=None):
     log = log or Logger()
     src_words = np.asarray(src_words)
     hyps = np.empty(len(src_words), dtype=str)
+    start = time.time()
+    n_processed = 0
     # Generate from the source data
     for src in eval_batches:
         # Retrieve original source and target words
@@ -102,6 +104,18 @@ def translate(translator, eval_batches, src_words, log=None):
         hyp_sents = translator(src, src_words=batch_src_words)
         # Record hypotheses
         hyps[src.original_idxs] = hyp_sents
+        # Number of tokens translated
+        n_processed += sum(src.lengths)
+        # Print progress
+        if eval_batches.just_passed_multiple(ceil(len(eval_batches) / 10)):
+            elapsed = time.time() - start
+            tok_per_s = n_processed / elapsed
+            log(
+                f"{eval_batches.percentage_done():.0f}% done "
+                f"({elapsed:.1f}s, {tok_per_s:.1f} tok/s)"
+            )
+            n_processed = 0
+            start = time.time()
     return hyps
 
 
