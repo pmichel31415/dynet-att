@@ -93,7 +93,7 @@ def translate(translator, eval_batches, src_words, log=None):
     """Translate a batch of source sentences (tokenized and numberized)"""
     log = log or Logger()
     src_words = np.asarray(src_words)
-    hyps = np.empty(len(src_words), dtype=str)
+    idx_to_hyp = {}
     start = time.time()
     n_processed = 0
     # Generate from the source data
@@ -103,7 +103,8 @@ def translate(translator, eval_batches, src_words, log=None):
         # Translate
         hyp_sents = translator(src, src_words=batch_src_words)
         # Record hypotheses
-        hyps[src.original_idxs] = hyp_sents
+        for b, idx in enumerate(src.original_idxs):
+            idx_to_hyp[idx] = hyp_sents[b]
         # Number of tokens translated
         n_processed += sum(src.lengths)
         # Print progress
@@ -116,6 +117,9 @@ def translate(translator, eval_batches, src_words, log=None):
             )
             n_processed = 0
             start = time.time()
+    # Return hypotheses in order
+    hyps = [idx_to_hyp[i] if i in idx_to_hyp else ""
+            for i in range(len(idx_to_hyp))]
     return hyps
 
 
