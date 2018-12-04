@@ -5,20 +5,19 @@ from dynn.data.caching import cached_to_file
 
 from ..util import Logger, default_filename, set_default_arg
 from ..data import prepare_training_batches, prepare_training_data
-from ..models import model_from_args, add_model_type_args
-from ..tokenizers import tokenizer_from_args, add_tokenizer_args
+from ..models import model_from_args
+from ..tokenizers import tokenizer_from_args
 from ..training import train
 from ..optimizers import optimizer_from_args
 from ..objectives import objective_from_args
 from ..command_line import add_preprocessing_args
 from ..command_line import add_optimization_args
 from ..command_line import add_model_args
-from ..command_line import parse_args_and_yaml
 
-from .base_task import BaseTask
+from .base_task import TokenizerAndModelTask
 
 
-class TrainTask(BaseTask):
+class TrainTask(TokenizerAndModelTask):
     desc = "Train an MT model"
 
     @staticmethod
@@ -45,30 +44,6 @@ class TrainTask(BaseTask):
                                  action="store_true",
                                  help="Preprocess the train data again "
                                  "(and update \"--train-data-cache\")")
-
-    @staticmethod
-    def parse_args(parser, task_subparser):
-        # Get base args (mainly to retrieve --config-file)
-        args = parse_args_and_yaml(parser, known_args_only=False)
-        # Now parse with the task specific subparser and add to the
-        # existing args
-        args = parse_args_and_yaml(
-            task_subparser,
-            known_args_only=False,
-            namespace=args
-        )
-        # Add model specific arguments
-        add_model_type_args(args.model_type, task_subparser)
-        # Add tokenizers specific arguments
-        add_tokenizer_args(args.tokenizer_type, task_subparser)
-        # Then parse again and add to the existing args
-        # (and this time be strict about the arguments)
-        final_args = parse_args_and_yaml(
-            parser,
-            known_args_only=True,
-            namespace=args
-        )
-        return final_args
 
     def verify_args(self):
         for arg_name in ["train_src", "train_tgt", "valid_src", "valid_tgt"]:

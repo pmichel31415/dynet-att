@@ -4,18 +4,17 @@ import os.path
 
 from ..util import Logger, default_filename, set_default_arg
 from ..data import prepare_eval_batches, prepare_eval_data
-from ..models import model_from_args, add_model_type_args
-from ..tokenizers import tokenizer_from_args, add_tokenizer_args
+from ..models import model_from_args
+from ..tokenizers import tokenizer_from_args
 from ..training import eval_ppl
 from ..command_line import add_preprocessing_args
 from ..command_line import add_model_args
-from ..command_line import parse_args_and_yaml
 
-from .base_task import BaseTask
+from .base_task import TokenizerAndModelTask
 
 
-class EvalPPLTask(BaseTask):
-    desc = "Train an MT model"
+class EvalPPLTask(TokenizerAndModelTask):
+    desc = "Evaluate perplexity"
 
     @staticmethod
     def add_args(parser):
@@ -30,30 +29,6 @@ class EvalPPLTask(BaseTask):
         eval_group.add_argument("--eval-batch-size", type=int, default=10)
         eval_group.add_argument("--max-tokens-per-eval-batch", type=int,
                                 default=9999)
-
-    @staticmethod
-    def parse_args(parser, task_subparser):
-        # Get base args (mainly to retrieve --config-file)
-        args = parse_args_and_yaml(parser, known_args_only=False)
-        # Now parse with the task specific subparser and add to the
-        # existing args
-        args = parse_args_and_yaml(
-            task_subparser,
-            known_args_only=False,
-            namespace=args
-        )
-        # Add model specific arguments
-        add_model_type_args(args.model_type, task_subparser)
-        # Add tokenizers specific arguments
-        add_tokenizer_args(args.tokenizer_type, task_subparser)
-        # Then parse again and add to the existing args
-        # (and this time be strict about the arguments)
-        final_args = parse_args_and_yaml(
-            parser,
-            known_args_only=True,
-            namespace=args
-        )
-        return final_args
 
     def verify_args(self):
         for arg_name in ["eval_src", "eval_tgt"]:
