@@ -15,7 +15,7 @@ class BaseSeq2Seq(dynn.layers.ParametrizedLayer):
     def encode(self, src):
         raise NotImplementedError()
 
-    def embed_word(self, word):
+    def embed_tgt_word(self, word, pos=0):
         raise NotImplementedError()
 
     @property

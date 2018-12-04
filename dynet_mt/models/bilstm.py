@@ -204,11 +204,8 @@ class AttBiLSTM(BaseSeq2Seq):
         return [dy.pick_batch_elem(batched_state, b)
                 for batched_state in batched_states]
 
-    def embed_word(self, word, tgt=False):
-        if tgt:
-            return self.tgt_embed(word)
-        else:
-            return self.src_embed(word)
+    def embed_tgt_word(self, word, pos=0):
+        return self.tgt_embed(word)
 
     def decode_step(self, X, wemb, state, attn_mask=None):
         bsz = wemb.dim()[1]

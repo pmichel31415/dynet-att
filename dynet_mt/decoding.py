@@ -97,8 +97,9 @@ class BeamSearch(Decoding):
                             "is_over": True,
                         }
                     else:
+                        pos = len(beam["words"])
                         new_beam = {
-                            "wemb": model.embed_word(word, tgt=True),
+                            "wemb": model.embed_tgt_word(word, pos=pos),
                             "state": state,
                             "words": beam["words"] + [word],
                             "score": beam["score"] + log_p[word],

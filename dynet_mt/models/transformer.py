@@ -139,15 +139,14 @@ class Transformer(BaseSeq2Seq):
         #  Return list of encodings for each layer
         return X
 
-    def embed_word(self, word, tgt=False):
-        if tgt:
-            return self.tgt_embed(word) * np.sqrt(self.embed_dim)
-        else:
-            return self.src_embed(word) * np.sqrt(self.embed_dim)
+    def embed_tgt_word(self, word, pos=0):
+        embed = self.tgt_embed(word) * np.sqrt(self.embed_dim)
+        return embed + dy.inputTensor(self.pos_embeds[:, pos+1])
 
     @property
     def sos(self):
-        return self.sos_p[0] * np.sqrt(self.embed_dim)
+        embed = self.sos_p[0] * np.sqrt(self.embed_dim)
+        return embed + dy.inputTensor(self.pos_embeds[:, 0])
 
     @property
     def initial_decoder_state(self):
