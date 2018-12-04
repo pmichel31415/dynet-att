@@ -5,9 +5,9 @@ import time
 import numpy as np
 import dynet as dy
 from dynn import io
+from sacrebleu import corpus_bleu
 
 from .util import Logger
-from .evaluation import bleu_score
 from .objectives import NLLObjective
 
 
@@ -68,7 +68,7 @@ def eval_ppl(model, eval_batches, log=None):
     return ppl
 
 
-def eval_bleu(translator, eval_batches, src_words, tgt_words, detok, log=None):
+def eval_bleu(translator, eval_batches, src_words, tgt_words, log=None):
     """Compute BLEU score over a given dataset"""
     log = log or Logger()
     hyps = []
@@ -76,16 +76,17 @@ def eval_bleu(translator, eval_batches, src_words, tgt_words, detok, log=None):
     # Generate from the source data
     for src, tgt in eval_batches:
         # Retrieve original source and target words
-        batch_src_words = src_words[src.original_idxs]
-        batch_tgt_words = tgt_words[tgt.original_idxs]
+        batch_src_words = [src_words[idx] for idx in src.original_idxs]
+        batch_tgt_words = [tgt_words[idx] for idx in tgt.original_idxs]
         # Translate
-        hyp_sents = translator(src, src_word=batch_src_words)
+        hyp_sents = translator(src, src_words=batch_src_words)
         # Record hypotheses
         hyps.extend(hyp_sents)
         # Also record the detokenized reference
-        refs.extend([translator.detok(words) for words in batch_tgt_words])
+        refs.extend([translator.tok.detokenize(words)
+                     for words in batch_tgt_words])
     # BLEU
-    bleu = bleu_score(hyps, refs)
+    bleu = corpus_bleu(hyps, [refs], tokenize="intl")
     return bleu
 
 

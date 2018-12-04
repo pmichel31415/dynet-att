@@ -147,14 +147,18 @@ def prepare_eval_data(args, tok, log=None):
     log("Create dictionaries")
     dic_src, dic_tgt = dictionaries_from_args(args, tok)
     # Load training data
-    log("Load eval data")
-    eval_src = load_and_numberize(args.eval_src, dic_src, tok, args.src_lang)
-    eval_tgt = load_and_numberize(args.eval_tgt, dic_tgt, tok, args.tgt_lang)
+    log("Load evaluation data")
+    eval_src_words = load_and_tokenize(args.eval_src, tok, args.src_lang)
+    eval_tgt_words = load_and_tokenize(args.eval_tgt, tok, args.tgt_lang)
+    log("Numberize")
+    eval_src = dic_src.numberize(eval_src_words)
+    eval_tgt = dic_tgt.numberize(eval_tgt_words)
     # Append EOS
     eval_tgt = append_eos(eval_tgt, dic_tgt.eos_idx)
 
     # Return as dictionary
-    data = {"eval_src": eval_src, "eval_tgt": eval_tgt}
+    data = {"eval_src": eval_src, "eval_src_words": eval_src_words,
+            "eval_tgt": eval_tgt, "eval_tgt_words": eval_tgt_words}
     # Return
     return data, dic_src, dic_tgt
 

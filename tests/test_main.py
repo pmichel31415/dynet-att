@@ -258,6 +258,22 @@ class TestMain(TestCase):
         ])
         main.main()
 
+    def test_eval_bleu_config_file(self):
+        config_file = os.path.join(self.config_folder, "test_config.yaml")
+        sys.argv.extend([
+            # General args
+            "--config-file", config_file,
+            "--env", "train",
+        ])
+        main.main()
+        sys.argv = [sys.argv[0]]
+        sys.argv.extend([
+            # General args
+            "--config-file", config_file,
+            "--env", "eval_bleu",
+        ])
+        main.main()
+
     def test_translate_config_file(self):
         config_file = os.path.join(self.config_folder, "test_config.yaml")
         sys.argv.extend([

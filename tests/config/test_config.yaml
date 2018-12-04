@@ -35,4 +35,10 @@ translate:
   trans_batch_size: 2
   beam_size: 2
   max_len: 3
-
+eval_bleu:
+  task: eval_bleu
+  eval_src: tests/data/valid.ja
+  eval_tgt: tests/data/valid.en
+  eval_batch_size: 2
+  beam_size: 2
+  max_len: 3

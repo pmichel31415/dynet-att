@@ -93,13 +93,15 @@ class BeamSearch(Decoding):
                 for word in next_words:
                     # Handle stop condition
                     if word == model.dic_tgt.eos_idx:
-                        if long_enough:
-                            new_beam = {
-                                "words": beam["words"],
-                                "score": beam["score"] + log_p[word],
-                                "align": beam["align"],
-                                "is_over": True,
-                            }
+                        # Skip beams that end before the minimal length
+                        if not long_enough:
+                            continue
+                        new_beam = {
+                            "words": beam["words"],
+                            "score": beam["score"] + log_p[word],
+                            "align": beam["align"],
+                            "is_over": True,
+                        }
                     else:
                         pos = len(beam["words"])
                         new_beam = {
