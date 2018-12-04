@@ -29,10 +29,11 @@ class Decoding(object):
 
 class BeamSearch(Decoding):
 
-    def __init__(self, beam_size, lenpen, max_len=99999):
+    def __init__(self, beam_size, lenpen, max_len=99999, min_len=1):
         self.beam_size = beam_size
         self.lenpen = lenpen
         self.max_len = max_len
+        self.min_len = min_len
 
     def __call__(self, model, src):
         dy.renew_cg()
@@ -56,6 +57,7 @@ class BeamSearch(Decoding):
         attn_mask = src.get_mask(base_val=0, mask_val=-np.inf)
         # Max length
         max_len = min(2 * src.max_length, self.max_len)
+        print(max_len)
         # Initialize beams
         first_beam = {
             "wemb": model.sos,  # Previous word embedding
@@ -87,15 +89,17 @@ class BeamSearch(Decoding):
                 # top k words
                 next_words = log_p.argsort()[-self.beam_size:]
                 # Add to new beam
+                long_enough = len(beam["words"]) >= self.min_len
                 for word in next_words:
                     # Handle stop condition
                     if word == model.dic_tgt.eos_idx:
-                        new_beam = {
-                            "words": beam["words"],
-                            "score": beam["score"] + log_p[word],
-                            "align": beam["align"],
-                            "is_over": True,
-                        }
+                        if long_enough:
+                            new_beam = {
+                                "words": beam["words"],
+                                "score": beam["score"] + log_p[word],
+                                "align": beam["align"],
+                                "is_over": True,
+                            }
                     else:
                         pos = len(beam["words"])
                         new_beam = {
