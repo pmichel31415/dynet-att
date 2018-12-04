@@ -196,6 +196,7 @@ def prepare_translate_batches(args, dataset, dic_src, dic_tgt):
         pad_idx=dic_src.pad_idx,
         max_samples=args.trans_batch_size,
         max_tokens=args.max_tokens_per_trans_batch,
+        group_by_length=True,
     )
     return eval_batches
 

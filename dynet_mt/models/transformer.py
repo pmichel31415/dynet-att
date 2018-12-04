@@ -211,7 +211,7 @@ class Transformer(BaseSeq2Seq):
         # Alignments from attention (average weights from each head)
         avg_attn = dy.average(attn_weights)
         attn_values = avg_attn.npvalue()[:, -1].reshape(-1, bsz)
-        align = attn_values.argmax(axis=0)
+        align = attn_values.argmax(axis=0).reshape(-1, bsz)
         # Return
         return new_state, log_p, align
 
