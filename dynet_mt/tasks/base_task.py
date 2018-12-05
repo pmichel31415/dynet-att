@@ -50,28 +50,16 @@ class TokenizerAndModelTask(BaseTask):
     desc = "Base for tasks requiring a tokenizer and a model"
 
     @staticmethod
-    def parse_args(parser, task_subparser):
-        # Get base args (mainly to retrieve --config-file)
+    def parse_args(parser):
+        # Get base args
         args = parse_args_and_yaml(parser, known_args_only=False)
-        # Now parse with the task specific subparser and add to the
-        # existing args
-        args = parse_args_and_yaml(
-            task_subparser,
-            known_args_only=False,
-            namespace=args
-        )
         # Add model specific arguments
-        add_model_type_args(args.model_type, task_subparser)
+        add_model_type_args(args.model_type, parser)
         # Add tokenizers specific arguments
-        add_tokenizer_args(args.tokenizer_type, task_subparser)
-        # Then parse again and add to the existing args
+        add_tokenizer_args(args.tokenizer_type, parser)
+        # Then parse again
         # (and this time be strict about the arguments)
-        final_args = parse_args_and_yaml(
-            parser,
-            known_args_only=True,
-            namespace=args
-        )
-        print(final_args)
+        final_args = parse_args_and_yaml(parser, known_args_only=True)
         return final_args
 
     def set_defaults(self, log):

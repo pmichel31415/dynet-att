@@ -26,7 +26,12 @@ def get_task():
     # This is a hack for config files
     task_name = base_args.task
     task_type = task_types[task_name]
-    task_args = task_type.parse_args(parser, task_parsers[task_name])
+    # Rebuild the parser for this task only
+    parser = get_base_parser(with_tasks=False)
+    parser.add_argument("task", nargs="?", choices=supported_tasks, type=str)
+    task_type.add_args(parser)
+    # Parse args
+    task_args = task_type.parse_args(parser)
     return task_type(task_args)
 
 

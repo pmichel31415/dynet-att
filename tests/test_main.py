@@ -238,6 +238,7 @@ class TestMain(TestCase):
         sys.argv.extend([
             # General args
             "--config-file", config_file,
+            "--output-dir", self.path,
             "--env", "train",
         ])
         main.main()
@@ -247,6 +248,7 @@ class TestMain(TestCase):
         sys.argv.extend([
             # General args
             "--config-file", config_file,
+            "--output-dir", self.path,
             "--env", "train",
         ])
         main.main()
@@ -254,6 +256,7 @@ class TestMain(TestCase):
         sys.argv.extend([
             # General args
             "--config-file", config_file,
+            "--output-dir", self.path,
             "--env", "eval_ppl",
         ])
         main.main()
@@ -263,6 +266,7 @@ class TestMain(TestCase):
         sys.argv.extend([
             # General args
             "--config-file", config_file,
+            "--output-dir", self.path,
             "--env", "train",
         ])
         main.main()
@@ -270,6 +274,7 @@ class TestMain(TestCase):
         sys.argv.extend([
             # General args
             "--config-file", config_file,
+            "--output-dir", self.path,
             "--env", "eval_bleu",
         ])
         main.main()
@@ -279,6 +284,7 @@ class TestMain(TestCase):
         sys.argv.extend([
             # General args
             "--config-file", config_file,
+            "--output-dir", self.path,
             "--env", "train",
         ])
         main.main()
@@ -286,6 +292,7 @@ class TestMain(TestCase):
         sys.argv.extend([
             # General args
             "--config-file", config_file,
+            "--output-dir", self.path,
             "--env", "translate",
         ])
         main.main()

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import argparse
 import yaml
 
@@ -11,7 +10,7 @@ from .tokenizers import supported_tokenizer_types
 from .util import Logger
 
 
-def get_base_parser():
+def get_base_parser(with_tasks=True):
     parser = argparse.ArgumentParser()
     # Add dynet args
     dynn.command_line.add_dynet_args(parser)
@@ -30,8 +29,11 @@ def get_base_parser():
                         help="Temp directory")
     parser.add_argument("--src-lang", type=str, help="Source language")
     parser.add_argument("--tgt-lang", type=str, help="Target language")
-    tasks_parsers = parser.add_subparsers(title="Tasks", dest="task")
-    return parser, tasks_parsers
+    if with_tasks:
+        tasks_parsers = parser.add_subparsers(title="Tasks", dest="task")
+        return parser, tasks_parsers
+    else:
+        return parser
 
 
 def add_preprocessing_args(parser):
@@ -146,12 +148,12 @@ def add_evaluation_args(parser):
                             "total size)")
 
 
-def parse_args_and_yaml(parser, known_args_only=True, namespace=None):
+def parse_args_and_yaml(parser, known_args_only=True):
     """Parse options from command line arguments and optionally config file"""
     if known_args_only:
-        args = parser.parse_args(namespace=namespace)
+        args = parser.parse_args()
     else:
-        args, _ = parser.parse_known_args(namespace=namespace)
+        args, _ = parser.parse_known_args()
     # Parse config file
     if args.config_file:
         with open(args.config_file, "r") as f:

@@ -1,29 +1,28 @@
 exp_name: test
 verbose: True
+# Model args
 architecture: test_bilstm
-gradient_clip: 1.0
-trainer: sgd
-output_dir: "."
+# Tokenizer args
 tokenizer_type: subword
 subword_algo: unigram
 subword_train_files:
   - tests/data/train.ja
   - tests/data/train.en
 subword_voc_size: 1000
-objective: nll
-label_smoothing: 0.1
 train:
   task: train
-  # Tokenizer args
+  # Data args
   train_src: tests/data/train.ja
   train_tgt: tests/data/train.en
   valid_src: tests/data/valid.ja
   valid_tgt: tests/data/valid.en
-  # Model args
-  architecture: test_bilstm
   # Optimization args
+  objective: nll
+  label_smoothing: 0.1
   batch_size: 2
   valid_batch_size: 2
+  gradient_clip: 1.0
+  trainer: sgd
 eval_ppl:
   task: eval_ppl
   eval_src: tests/data/valid.ja
